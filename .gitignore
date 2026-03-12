@@ -1,0 +1,7 @@
+*.json
+*.js
+*.m3u8
+*.mp4
+downloads
+tests
+*.log
