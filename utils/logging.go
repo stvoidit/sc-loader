@@ -30,7 +30,6 @@ func shortSourceFile(a *slog.Attr) {
 		return
 	}
 	src.File = filepath.Base(src.File)
-	src.Function = src.Function
 }
 
 func NewSlogHandlerOptions(logLevel slog.Level, opts ...ReplaceOption) slog.HandlerOptions {
