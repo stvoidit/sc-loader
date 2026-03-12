@@ -61,7 +61,7 @@ func (c ClientAPI) PickBestHTTPS(ctx context.Context, domains []string) string {
 			for range cycles {
 				c.probeHTTPS(ctx, &out[i], timeout)
 			}
-			slog.Info("probeHTTPS",
+			slog.Debug("probeHTTPS",
 				slog.String("Domain", out[i].Domain),
 				slog.String("URL", out[i].String()),
 				slog.Duration("Duration", out[i].TTFB/cycles),

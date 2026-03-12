@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -21,7 +20,6 @@ type ReplaceOption func(a *slog.Attr)
 // }
 
 func shortSourceFile(a *slog.Attr) {
-	fmt.Printf("%+v\n", a)
 	if a.Key != slog.SourceKey {
 		return
 	}
