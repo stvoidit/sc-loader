@@ -45,7 +45,7 @@ const (
 	TB = 1024 * GB
 )
 
-func FormatFileSize(size int64) string {
+func FormatFileSize[T ~int | int64](size T) string {
 	switch {
 	case size < KB:
 		return fmt.Sprintf("%d B", size)

@@ -218,38 +218,37 @@ func (c *ClientAPI) GetPlaylistVideo(
 	return c.filterParts(links), hlsQuery, nil
 }
 
-func (c *ClientAPI) Download(ctx context.Context, f *os.File, url string) error {
+func (c *ClientAPI) Download(ctx context.Context, f *os.File, url string) (int, error) {
 	if c.writedParts.Has(url) {
-		return nil
+		return 0, nil
 	}
-	if err := c.download(ctx, url, f); err != nil {
-		return err
+	n, err := c.download(ctx, url, f)
+	if err != nil {
+		return n, err
 	}
 	c.writedParts.Set(url)
-	return nil
+	return n, nil
 }
 
-func (c *ClientAPI) download(ctx context.Context, link string, f *os.File) error {
+func (c *ClientAPI) download(ctx context.Context, link string, f *os.File) (int, error) {
 	req, err := c.makeRequest(ctx, link)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	res, err := c.doGetRequest(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer utils.DeferCloseReader(res.Body)
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := res.Body.Close(); err != nil {
-		return err
+		return 0, err
 	}
-	if _, err := f.Write(b); err != nil {
-		return err
-	}
-	return nil
+
+	return f.Write(b)
 }
 
 func (c *ClientAPI) startPlaylistLoop(

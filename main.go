@@ -100,32 +100,24 @@ func RecordStream(ctx context.Context, config utils.Config, username string) (er
 	var start = time.Now()
 	ch := c.StartPlaylistLoop(ctx, plist, pkey)
 
+	var writedBytes int
 	for vid := range ch {
-		if err := c.Download(ctx, f, vid); err != nil && !utils.IsCancel(err) {
+		if n, err := c.Download(ctx, f, vid); err != nil && !utils.IsCancel(err) {
 			slog.Error("GetPlaylistVideo", "error", err.Error())
 			return err
+		} else {
+			writedBytes += n
 		}
-		logStat(f, username, usernameURL, start)
+		logStat(writedBytes, username, usernameURL, start)
 	}
-	// wg.Wait()
 	return err
 }
 
-func logStat(f *os.File, username, url string, start time.Time) {
-	size, err := utils.FileStat(f)
-	if err != nil {
-		slog.Error("logStat", slog.String("error", err.Error()))
-		return
-	}
+func logStat(size int, username, url string, start time.Time) {
+	hrSize := utils.FormatFileSize(size)
 	duration := time.Since(start).Round(time.Second)
-
-	// slog.Info(username,
-	// 	slog.String("size", size),
-	// 	slog.Duration("duration", duration),
-	// 	slog.String("url", url),
-	// )
 	_ = username
-	fmt.Printf("\r%s %s %s\r", url, size, duration)
+	fmt.Printf("\r%s %s %s\r", url, hrSize, duration)
 }
 
 func parseUsername() (string, error) {
