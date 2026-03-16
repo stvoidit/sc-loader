@@ -221,37 +221,40 @@ func (c *ClientAPI) GetPlaylistVideo(
 	return c.filterParts(links), hlsQuery, nil
 }
 
-func (c *ClientAPI) Download(ctx context.Context, f *os.File, url string) (int, error) {
+func (c *ClientAPI) Download(ctx context.Context, f *os.File, url string) (n int, err error) {
 	if c.writedParts.Has(url) {
 		return 0, nil
 	}
-	n, err := c.download(ctx, url, f)
-	if err != nil {
-		return n, err
-	}
-	c.writedParts.Set(url)
-	return n, nil
-}
-
-func (c *ClientAPI) download(ctx context.Context, link string, f *os.File) (int, error) {
-	req, err := c.makeRequest(ctx, link)
+	buf, err := c.download(ctx, url)
 	if err != nil {
 		return 0, err
+	}
+	n, err = f.Write(buf)
+	if err != nil {
+		return 0, err
+	}
+	c.writedParts.Set(url)
+	return n, err
+}
+
+func (c *ClientAPI) download(ctx context.Context, link string) ([]byte, error) {
+	req, err := c.makeRequest(ctx, link)
+	if err != nil {
+		return nil, err
 	}
 	res, err := c.doGetRequest(req)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer utils.DeferCloseReader(res.Body)
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	if err := res.Body.Close(); err != nil {
-		return 0, err
+		return nil, err
 	}
-
-	return f.Write(b)
+	return b, nil
 }
 
 func (c *ClientAPI) startPlaylistLoop(
