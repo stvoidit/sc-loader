@@ -221,11 +221,18 @@ func (c *ClientAPI) GetPlaylistVideo(
 	return c.filterParts(links), hlsQuery, nil
 }
 
-func (c *ClientAPI) Download(ctx context.Context, f *os.File, url string) (n int, err error) {
+func (c ClientAPI) IsNewURL(link string) bool {
+	return !c.writedParts.Has(link)
+}
+func (c *ClientAPI) SetCheckURL(link string) {
+	c.writedParts.Set(link)
+}
+
+func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, url string) (n int, err error) {
 	if c.writedParts.Has(url) {
 		return 0, nil
 	}
-	buf, err := c.download(ctx, url)
+	buf, err := c.DownloadBuf(ctx, url)
 	if err != nil {
 		return 0, err
 	}
@@ -237,7 +244,7 @@ func (c *ClientAPI) Download(ctx context.Context, f *os.File, url string) (n int
 	return n, err
 }
 
-func (c *ClientAPI) download(ctx context.Context, link string) ([]byte, error) {
+func (c *ClientAPI) DownloadBuf(ctx context.Context, link string) ([]byte, error) {
 	req, err := c.makeRequest(ctx, link)
 	if err != nil {
 		return nil, err

@@ -59,7 +59,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := manager.RecordStream(ctx, streamer); err != nil {
+	if err := manager.RecordStream(ctx, streamer); err != nil && !utils.IsCancel(err) {
 		slog.Error("RecordStream", slog.String("error", err.Error()))
 	}
 }
