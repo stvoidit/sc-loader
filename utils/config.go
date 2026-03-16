@@ -42,25 +42,26 @@ func findConfigFile(filename string) (string, error) {
 	return filename, nil
 }
 
-func ReadConfig(filename string) (cnf Config, err error) {
+func ReadConfig(filename string) (cnf *Config, err error) {
 	if filename == "" {
 		filename = defaultFilename
 	}
 	slog.Info("ReadConfig", slog.String("filename", filename))
 	b, err := os.ReadFile(filename)
 	if err != nil {
-		return cnf, err
+		return nil, err
 	}
-	if err := json.Unmarshal(b, &cnf, json.StringifyNumbers(true)); err != nil {
-		return cnf, err
+	cnf = new(Config)
+	if err := json.Unmarshal(b, cnf); err != nil {
+		return nil, err
 	}
 	if err := cnf.checkFolder(); err != nil {
-		return cnf, err
+		return nil, err
 	}
 	return cnf, err
 }
 
-func LoadConfig() (cnf Config, err error) {
+func LoadConfig() (cnf *Config, err error) {
 	filename, err := findConfigFile(defaultFilename)
 	if err != nil {
 		return cnf, err

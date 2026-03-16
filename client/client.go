@@ -20,18 +20,21 @@ type Probe struct{}
 
 type ClientAPI struct {
 	_c             *http.Client
-	cnf            utils.Config
+	cnf            *utils.Config
 	defaultHeaders http.Header
 	writedParts    utils.Set[string]
 }
 
-func NewClient(cnf utils.Config) *ClientAPI {
+func NewClient(cnf *utils.Config) *ClientAPI {
 	jar, _ := cookiejar.New(nil)
 	transport := &http.Transport{
 		Proxy:               http.ProxyFromEnvironment,
 		MaxIdleConnsPerHost: 10,
 		MaxIdleConns:        10,
 		IdleConnTimeout:     time.Millisecond * 200,
+		// TLSClientConfig: &tls.Config{
+		// 	InsecureSkipVerify: false,
+		// },
 	}
 	_c := &http.Client{
 		Timeout:   10 * time.Second,
@@ -253,13 +256,14 @@ func (c *ClientAPI) download(ctx context.Context, link string, f *os.File) (int,
 
 func (c *ClientAPI) startPlaylistLoop(
 	ctx context.Context,
+	username string,
 	ch chan<- string,
 	plist string,
 	pkey utils.PSCH,
 ) {
 	defer close(ch)
-	var currentTry = 0
-	const maxRetry = 30
+	// var currentTry = 0
+	// const maxRetry = 30
 	const timeout = (time.Second * 1) + (time.Millisecond * 431)
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
@@ -282,24 +286,40 @@ loop:
 				}
 				break loop
 			}
-			for i := range vids {
-				ch <- vids[i]
-			}
-			if len(vids) == 0 {
-				currentTry++
-				if currentTry >= maxRetry {
-					slog.Error("GetPlaylistVideo", "error", "may be offline, max retries")
-					break loop
+			if len(vids) > 0 {
+				for i := range vids {
+					ch <- vids[i]
 				}
 			} else {
-				currentTry = 0
+				status, online, err := c.GetRoomStatus(ctx, username)
+				if err != nil {
+					if !utils.IsCancel(err) {
+						slog.Error("GetPlaylistVideo", "error", err.Error())
+					}
+					break loop
+				}
+				if !online {
+					slog.Warn("GetRoomStatus", slog.String("status", status), slog.Bool("online", online))
+					break loop
+				}
+				slog.Info("GetRoomStatus", slog.String("status", status), slog.Bool("online", online))
 			}
+
+			// if len(vids) == 0 {
+			// 	currentTry++
+			// 	if currentTry >= maxRetry {
+			// 		slog.Error("GetPlaylistVideo", "error", "may be offline, max retries")
+			// 		break loop
+			// 	}
+			// } else {
+			// 	currentTry = 0
+			// }
 		}
 	}
 }
 
-func (c *ClientAPI) StartPlaylistLoop(ctx context.Context, plist string, pkey utils.PSCH) <-chan string {
+func (c *ClientAPI) StartPlaylistLoop(ctx context.Context, username, plist string, pkey utils.PSCH) <-chan string {
 	var ch = make(chan string, 100)
-	go c.startPlaylistLoop(ctx, ch, plist, pkey)
+	go c.startPlaylistLoop(ctx, username, ch, plist, pkey)
 	return ch
 }
