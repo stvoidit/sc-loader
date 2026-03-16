@@ -121,8 +121,12 @@ func (cnf Config) String() string {
 	return sb.String()
 }
 
+func (cnf Config) MakeFilePath(filename string) (fullPath string) {
+	return filepath.Join(cnf.Folder, filename)
+}
+
 func (cnf Config) CreateVideoFile(filename string) (file *os.File, err error) {
-	fullPath := filepath.Join(cnf.Folder, filename)
+	fullPath := cnf.MakeFilePath(filename)
 	return os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0644)
 }
 
