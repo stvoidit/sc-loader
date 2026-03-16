@@ -111,14 +111,27 @@ func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (err erro
 func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan string) (writedBytes int, err error) {
 	_, _ = os.Stdout.WriteString("\r\n")
 	remuxFileName := strings.Replace(filename, "_tmp", "", 1)
+	// args := []string{
+	// 	"-hide_banner", "-v", "error", "-stats",
+	// 	"-i", "-", "-c", "copy",
+	// 	"-movflags", "+faststart",
+	// 	remuxFileName,
+	// }
 	args := []string{
+		"-vaapi_device", "/dev/dri/renderD128",
+		"-hwaccel", "vaapi",
 		"-hide_banner", "-v", "error", "-stats",
-		"-i", "-", "-c", "copy",
+		"-i", "-",
+		"-c:a", "copy",
+		"-vf", "format=nv12|vaapi,hwupload",
+		"-c:v", "hevc_vaapi",
+		"-qp", "28",
+		"-profile:v", "main",
 		"-movflags", "+faststart",
 		remuxFileName,
 	}
 	cmd := exec.Command(m.ffmpeg, args...)
-	cmd.WaitDelay = time.Second * 5
+	cmd.WaitDelay = time.Minute
 	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stdout
 	pw, err := cmd.StdinPipe()
 	if err != nil {
