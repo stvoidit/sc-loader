@@ -307,16 +307,6 @@ loop:
 				}
 				slog.Info("GetRoomStatus", slog.String("status", status), slog.Bool("online", online))
 			}
-
-			// if len(vids) == 0 {
-			// 	currentTry++
-			// 	if currentTry >= maxRetry {
-			// 		slog.Error("GetPlaylistVideo", "error", "may be offline, max retries")
-			// 		break loop
-			// 	}
-			// } else {
-			// 	currentTry = 0
-			// }
 		}
 	}
 }

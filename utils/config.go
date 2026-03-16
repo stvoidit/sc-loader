@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const defaultFilename = "config.json"
@@ -122,10 +121,7 @@ func (cnf Config) String() string {
 	return sb.String()
 }
 
-func (cnf Config) CreateVideoFile(username string) (file *os.File, err error) {
-	const format = "20060102-150405"
-	timeSuffix := time.Now().Format(format)
-	filename := username + "_" + timeSuffix + "_tmp.mp4"
+func (cnf Config) CreateVideoFile(filename string) (file *os.File, err error) {
 	fullPath := filepath.Join(cnf.Folder, filename)
 	return os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0644)
 }

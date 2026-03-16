@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Streamer struct {
@@ -36,4 +37,11 @@ func ParseUsername(arg, host string) (Streamer, error) {
 		s.SreamURL = (&url.URL{Scheme: "https", Host: host, Path: arg}).String()
 	}
 	return s, nil
+}
+
+func (s Streamer) MakeFilename() (filename string) {
+	const format = "20060102-150405"
+	timeSuffix := time.Now().Format(format)
+	filename = s.Username + "_" + timeSuffix + "_tmp.mp4"
+	return
 }

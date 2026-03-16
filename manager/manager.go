@@ -2,7 +2,6 @@ package manager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -52,15 +51,15 @@ func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (err erro
 	}
 	slog.Debug("main", slog.Int("roomID", roomID), slog.String("cdn", m.bestCDN))
 
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		if status, online, err := m.client.GetRoomStatus(ctx, streamer.Username); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Error("GetRoomStatus", slog.String("error", err.Error()))
-		} else {
-			slog.Info("GetRoomStatus", slog.Bool("online", online), slog.String("status", status))
-		}
-	}()
+	// defer func() {
+	// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	// 	defer cancel()
+	// 	if status, online, err := m.client.GetRoomStatus(ctx, streamer.Username); err != nil && !errors.Is(err, context.Canceled) {
+	// 		slog.Error("GetRoomStatus", slog.String("error", err.Error()))
+	// 	} else {
+	// 		slog.Info("GetRoomStatus", slog.Bool("online", online), slog.String("status", status))
+	// 	}
+	// }()
 
 	plist, pkey, err := m.client.GetPlaylistVariants(ctx, m.bestCDN, roomID)
 	if err != nil {
@@ -70,7 +69,7 @@ func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (err erro
 	slog.Debug("main", "plist", plist)
 	slog.Info("RecordStream", slog.String("cdn", m.bestCDN))
 
-	f, err := m.config.CreateVideoFile(streamer.Username)
+	f, err := m.config.CreateVideoFile(streamer.MakeFilename())
 	if err != nil {
 		return err
 	}
