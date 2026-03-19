@@ -15,6 +15,7 @@ import (
 	"sc-loader/models"
 	"sc-loader/utils"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,6 +28,7 @@ type ClientAPI struct {
 	cnf            *utils.Config
 	defaultHeaders http.Header
 	writedParts    utils.Set[string]
+	mu             sync.RWMutex
 }
 
 func NewClient(cnf *utils.Config) *ClientAPI {
@@ -63,13 +65,13 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 	}
 }
 
-func (c *ClientAPI) filterParts(links []string) []string {
+func (c *ClientAPI) filterParts(links []string) (newLinks []string) {
+	newLinks = make([]string, 0, len(links))
 	if links == nil {
-		return nil
+		return newLinks
 	}
-	var newLinks = make([]string, 0, len(links))
 	for i := range links {
-		if !c.writedParts.Has(links[i]) {
+		if c.IsNewURL(links[i]) {
 			newLinks = append(newLinks, links[i])
 		}
 	}
@@ -268,7 +270,9 @@ func (c *ClientAPI) GetPlaylistVideo(
 	return c.filterParts(links), hlsQuery, nil
 }
 
-func (c ClientAPI) IsNewURL(link string) bool {
+func (c *ClientAPI) IsNewURL(link string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return !c.writedParts.Has(link)
 }
 func (c *ClientAPI) SetCheckURL(link string) {
