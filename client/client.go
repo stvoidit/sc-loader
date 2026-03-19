@@ -124,6 +124,9 @@ func (c *ClientAPI) getFrontendVersion(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := unzipResponse(res); err != nil {
+		return err
+	}
 	defer utils.DeferClose(res.Body)
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
