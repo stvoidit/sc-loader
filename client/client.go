@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json/v2"
 	"errors"
 	"fmt"
@@ -33,12 +34,14 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 	jar, _ := cookiejar.New(nil)
 	transport := &http.Transport{
 		Proxy:               http.ProxyFromEnvironment,
+		ForceAttemptHTTP2:   true,
 		MaxIdleConnsPerHost: 10,
 		MaxIdleConns:        10,
 		IdleConnTimeout:     time.Millisecond * 200,
-		// TLSClientConfig: &tls.Config{
-		// 	InsecureSkipVerify: false,
-		// },
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+			MinVersion:         tls.VersionTLS13,
+		},
 	}
 	_c := &http.Client{
 		Timeout:   10 * time.Second,
