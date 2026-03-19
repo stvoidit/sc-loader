@@ -331,6 +331,8 @@ loop:
 			vids, hlsQuery, err := c.GetPlaylistVideo(ctx, plist, pkey, more)
 			if len(hlsQuery) > 0 {
 				more = hlsQuery
+			} else {
+				more = nil
 			}
 			if err != nil {
 				if !utils.IsCancel(err) {
