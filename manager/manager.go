@@ -159,12 +159,3 @@ loop:
 	}
 	return writedBytes, cmd.Wait()
 }
-
-// defer func() {
-// 	if err := pw.Close(); err != nil {
-// 		slog.Error("pw.Close", slog.String("error", err.Error()))
-// 	}
-// 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "exit status") {
-// 		slog.Error("cmd.Wait", slog.String("error", err.Error()))
-// 	}
-// }()
