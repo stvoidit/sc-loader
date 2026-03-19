@@ -11,10 +11,14 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"regexp"
 	"sc-loader/models"
 	"sc-loader/utils"
+	"strings"
 	"time"
 )
+
+const ua = `Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0`
 
 type Probe struct{}
 
@@ -48,13 +52,13 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 		defaultHeaders: http.Header{
 			"Accept":          []string{"*/*"},
 			`Accept-Language`: []string{`en-US`},
-			`Accept-Encoding`: []string{`gzip`},
+			`Accept-Encoding`: []string{`gzip, deflate`},
 			`Sec-Fetch-Mode`:  []string{"cors"},
 			`Sec-Fetch-Site`:  []string{`same-origin`},
 			`Sec-GPC`:         []string{"1"},
 			"Origin":          []string{fmt.Sprintf(`https://%s`, cnf.Host)},
 			`Referer`:         []string{fmt.Sprintf(`https://%s/`, cnf.Host)},
-			`User-Agent`:      []string{`Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0`},
+			`User-Agent`:      []string{ua},
 		},
 	}
 }
@@ -101,7 +105,45 @@ func (c *ClientAPI) Init(ctx context.Context) (cdnDomain string, err error) {
 	return id.GetDomainCDN(), err
 }
 
+func (c *ClientAPI) getFrontendVersion(ctx context.Context) error {
+	link := url.URL{
+		Scheme: scheme,
+		Host:   c.cnf.Host,
+		Path:   "/",
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("User-Agent", ua)
+	req.Header.Add("Accept", `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`)
+	req.Header.Add("Accept-Language", `en-US`)
+	req.Header.Add("Accept-Encoding", `gzip, deflate`)
+	req.Header.Add("Sec-GPC", "1")
+	res, err := c._c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer utils.DeferClose(res.Body)
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	result := regexp.MustCompile(`release_version:(.*)`).FindSubmatch(b)
+	if len(result) < 2 {
+		slog.Warn("GetFrontendVersion", slog.String("error", "regexp version not found"))
+		return nil
+	}
+	xFrontVerion := strings.TrimSpace(string(result[1]))
+	slog.Info("GetFrontendVersion", slog.String("version", xFrontVerion))
+	c.defaultHeaders.Set("front-version", xFrontVerion)
+	return nil
+}
+
 func (c *ClientAPI) InitClientConfig(ctx context.Context) (id models.InitialDynamic, err error) {
+	if err := c.getFrontendVersion(ctx); err != nil {
+		return id, err
+	}
 	var urlConfig = makeConfigURL(c.cnf.Host)
 	slog.Debug("Init", slog.String("userRoomUrl", urlConfig))
 	req, err := c.makeRequest(ctx, urlConfig)
@@ -114,8 +156,10 @@ func (c *ClientAPI) InitClientConfig(ctx context.Context) (id models.InitialDyna
 		return id, err
 	}
 	defer utils.DeferCloseReader(res.Body)
-	if xapiversion := res.Header.Get("X-Api-Version"); !utils.IsEmpty(xapiversion) {
-		c.defaultHeaders.Set("front-version", xapiversion)
+	if utils.IsEmpty(c.defaultHeaders.Get("X-Api-Version")) {
+		if xapiversion := res.Header.Get("X-Api-Version"); !utils.IsEmpty(xapiversion) {
+			c.defaultHeaders.Set("front-version", xapiversion)
+		}
 	}
 	var idr models.InitialDynamicResponse
 	if err := json.UnmarshalRead(res.Body, &idr); err != nil {

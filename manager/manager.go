@@ -11,11 +11,12 @@ import (
 	"time"
 )
 
-func NewManager(ctx context.Context, client *client.ClientAPI, config *utils.Config) (*Manager, error) {
+func NewManager(ctx context.Context, config *utils.Config) (*Manager, error) {
 	prog, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		return nil, err
 	}
+	client := client.NewClient(config)
 	InitialConfig, err := client.InitClientConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -109,14 +110,7 @@ func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (err erro
 // }
 
 func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan string) (writedBytes int, err error) {
-	_, _ = os.Stdout.WriteString("\r\n")
 	remuxFileName := strings.Replace(filename, "_tmp", "", 1)
-	// args := []string{
-	// 	"-hide_banner", "-v", "error", "-stats",
-	// 	"-i", "-", "-c", "copy",
-	// 	"-movflags", "+faststart",
-	// 	remuxFileName,
-	// }
 	args := []string{
 		"-vaapi_device", "/dev/dri/renderD128",
 		"-hwaccel", "vaapi",
@@ -125,14 +119,15 @@ func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan
 		"-c:a", "copy",
 		"-vf", "format=nv12|vaapi,hwupload",
 		"-c:v", "hevc_vaapi",
-		"-qp", "28",
+		"-qp", "26",
 		"-profile:v", "main",
-		"-movflags", "+faststart",
+		// "-sei", "+timing+recovery_point",
 		remuxFileName,
 	}
 	cmd := exec.Command(m.ffmpeg, args...)
-	cmd.WaitDelay = time.Minute
-	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stdout
+	cmd.WaitDelay = time.Second * 10
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	pw, err := cmd.StdinPipe()
 	if err != nil {
 		return writedBytes, err
@@ -140,29 +135,36 @@ func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan
 	if err := cmd.Start(); err != nil {
 		return writedBytes, err
 	}
-	defer func() {
-		if err := pw.Close(); err != nil {
-			slog.Error("pw.Close", slog.String("error", err.Error()))
-		}
-		if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "exit status") {
-			slog.Error("cmd.Wait", slog.String("error", err.Error()))
-		}
-	}()
+loop:
 	for vid := range ch {
 		if !m.client.IsNewURL(vid) {
 			continue
 		}
 		buf, err := m.client.DownloadBuf(ctx, vid)
 		if err != nil {
-			return writedBytes, err
+			break loop
 		}
-		if n, err := pw.Write(buf); err != nil {
+		// var n int
+		n, err := pw.Write(buf)
+		if err != nil {
 			slog.Error("GetPlaylistVideo", "error", err.Error())
-			return writedBytes, err
+			break loop
 		} else {
 			writedBytes += n
 			m.client.SetCheckURL(vid)
 		}
 	}
-	return writedBytes, nil
+	if err := pw.Close(); err != nil {
+		slog.Warn("pw.Close", slog.String("error", err.Error()))
+	}
+	return writedBytes, cmd.Wait()
 }
+
+// defer func() {
+// 	if err := pw.Close(); err != nil {
+// 		slog.Error("pw.Close", slog.String("error", err.Error()))
+// 	}
+// 	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "exit status") {
+// 		slog.Error("cmd.Wait", slog.String("error", err.Error()))
+// 	}
+// }()

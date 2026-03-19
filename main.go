@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"sc-loader/client"
 	"sc-loader/manager"
 	"sc-loader/utils"
 	"time"
@@ -52,14 +51,15 @@ func main() {
 	if config.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
-	client := client.NewClient(config)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	manager, err := manager.NewManager(ctx, client, config)
+
+	manager, err := manager.NewManager(ctx, config)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if err := manager.RecordStream(ctx, streamer); err != nil && !utils.IsCancel(err) {
 		slog.Error("RecordStream", slog.String("error", err.Error()))
 	}
+	slog.Info("process done")
 }

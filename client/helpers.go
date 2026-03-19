@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -37,6 +38,20 @@ func unzipResponse(response *http.Response) (err error) {
 		response.Header.Del("Content-Encoding")
 		response.Uncompressed = true
 		return nil
+	case "deflate":
+		fr := flate.NewReader(response.Body)
+		defer fr.Close()
+		b, err := io.ReadAll(fr)
+		if err != nil {
+			return err
+		}
+		if err := response.Body.Close(); err != nil {
+			return err
+		}
+		response.Body = io.NopCloser(bytes.NewReader(b))
+		response.Header.Del("Content-Encoding")
+		response.Uncompressed = true
+		return nil
 	default:
 		return ErrUnknownCompressionMethod
 	}
@@ -66,9 +81,10 @@ var (
 
 func makeConfigURL(host string) string {
 	link := url.URL{
-		Scheme: scheme,
-		Host:   host,
-		Path:   endpointConfig,
+		Scheme:   scheme,
+		Host:     host,
+		Path:     endpointConfig,
+		RawQuery: "requestPath=/",
 	}
 	return link.String()
 }
