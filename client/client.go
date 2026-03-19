@@ -15,7 +15,6 @@ import (
 	"sc-loader/models"
 	"sc-loader/utils"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -28,7 +27,6 @@ type ClientAPI struct {
 	cnf            *utils.Config
 	defaultHeaders http.Header
 	writedParts    utils.Set[string]
-	mu             sync.RWMutex
 }
 
 func NewClient(cnf *utils.Config) *ClientAPI {
@@ -50,7 +48,7 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 	return &ClientAPI{
 		_c:          _c,
 		cnf:         cnf,
-		writedParts: make(utils.Set[string]),
+		writedParts: utils.NewSet[string](),
 		defaultHeaders: http.Header{
 			"Accept":          []string{"*/*"},
 			`Accept-Language`: []string{`en-US`},
@@ -271,8 +269,6 @@ func (c *ClientAPI) GetPlaylistVideo(
 }
 
 func (c *ClientAPI) IsNewURL(link string) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
 	return !c.writedParts.Has(link)
 }
 func (c *ClientAPI) SetCheckURL(link string) {
@@ -280,7 +276,7 @@ func (c *ClientAPI) SetCheckURL(link string) {
 }
 
 func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, url string) (n int, err error) {
-	if c.writedParts.Has(url) {
+	if !c.IsNewURL(url) {
 		return 0, nil
 	}
 	buf, err := c.DownloadBuf(ctx, url)
@@ -291,7 +287,7 @@ func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, url string) (
 	if err != nil {
 		return 0, err
 	}
-	c.writedParts.Set(url)
+	c.SetCheckURL(url)
 	return n, err
 }
 

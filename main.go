@@ -45,9 +45,6 @@ func main() {
 		outs = append(outs, f)
 	}
 	slog.SetDefault(utils.NewSloglogger(logLevel, outs...))
-	defer func() {
-		slog.Info("stop", "streamer", streamer)
-	}()
 	if config.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
@@ -61,5 +58,5 @@ func main() {
 	if err := manager.RecordStream(ctx, streamer); err != nil && !utils.IsCancel(err) {
 		slog.Error("RecordStream", slog.String("error", err.Error()))
 	}
-	slog.Info("process done")
+	slog.Info("process done", "streamer", streamer)
 }
