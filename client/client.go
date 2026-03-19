@@ -266,11 +266,11 @@ func (c *ClientAPI) SetCheckURL(link string) {
 	c.writedParts.Set(link)
 }
 
-func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, url string) (n int, err error) {
-	if !c.IsNewURL(url) {
+func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, link string) (n int, err error) {
+	if !c.IsNewURL(link) {
 		return 0, nil
 	}
-	buf, err := c.DownloadBuf(ctx, url)
+	buf, err := c.DownloadBuf(ctx, link)
 	if err != nil {
 		return 0, err
 	}
@@ -278,11 +278,12 @@ func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, url string) (
 	if err != nil {
 		return 0, err
 	}
-	c.SetCheckURL(url)
+	c.SetCheckURL(link)
 	return n, err
 }
 
 func (c *ClientAPI) DownloadBuf(ctx context.Context, link string) ([]byte, error) {
+	defer c.SetCheckURL(link)
 	req, err := c.makeRequest(ctx, link)
 	if err != nil {
 		return nil, err
@@ -312,7 +313,7 @@ func (c *ClientAPI) startPlaylistLoop(
 	defer close(ch)
 	// var currentTry = 0
 	// const maxRetry = 30
-	const timeout = (time.Second * 1) + (time.Millisecond * 431)
+	const timeout = (time.Second * 2) + (time.Millisecond * 431)
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
 	var more url.Values
@@ -329,9 +330,9 @@ loop:
 				more = hlsQuery
 			}
 			if err != nil {
-				// if !utils.IsCancel(err) {
-				slog.Error("GetPlaylistVideo", "error", err.Error())
-				// }
+				if !utils.IsCancel(err) {
+					slog.Error("GetPlaylistVideo", "error", err.Error())
+				}
 				break loop
 			}
 			if len(vids) > 0 {

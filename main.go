@@ -55,8 +55,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := manager.RecordStream(ctx, streamer); err != nil && !utils.IsCancel(err) {
+	writedBytes, err := manager.RecordStream(ctx, streamer)
+	if err != nil && !utils.IsCancel(err) {
 		slog.Error("RecordStream", slog.String("error", err.Error()))
 	}
+	slog.Info("file size", slog.String("size", utils.FormatFileSize(writedBytes)))
 	slog.Info("process done", "streamer", streamer)
 }

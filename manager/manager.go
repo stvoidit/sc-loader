@@ -43,49 +43,28 @@ func (m Manager) GetFullPathVideoFile(streamer Streamer) string {
 	return m.config.MakeFilePath(filename)
 }
 
-func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (err error) {
-	sl := slog.With("streamer", streamer)
+func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (writedBytes int, err error) {
 	roomID, online, err := m.client.GetRoomID(ctx, streamer.Username)
 	if err != nil {
-		sl.Error("main", slog.String("error", err.Error()))
-		return err
+		slog.Error("main", "streamer", streamer, slog.String("error", err.Error()))
+		return writedBytes, err
 	}
 	if !online {
-		sl.Warn("main", slog.String("status", "offline"))
-		return err
+		slog.Warn("main", "streamer", streamer, slog.String("status", "offline"))
+		return writedBytes, err
 	}
 	slog.Debug("main", slog.Int("roomID", roomID), slog.String("cdn", m.bestCDN))
 	plist, pkey, err := m.client.GetPlaylistVariants(ctx, m.bestCDN, roomID)
 	if err != nil {
 		slog.Error("main.GetPlaylistVariants", slog.String("error", err.Error()))
-		return err
+		return writedBytes, err
 	}
 	slog.Debug("main", "plist", plist)
 	slog.Info("RecordStream", slog.String("cdn", m.bestCDN))
 	outputFilename := m.GetFullPathVideoFile(streamer)
 	ch := m.client.StartPlaylistLoop(ctx, streamer.Username, plist, pkey)
-	if _, err := m.StartPipeFFmpeg(ctx, outputFilename, ch); err != nil {
-		return err
-	}
-	return nil
+	return m.StartPipeFFmpeg(ctx, outputFilename, ch)
 }
-
-// func logStat(size int, streamer Streamer, start time.Time) {
-// 	hrSize := utils.FormatFileSize(size)
-// 	duration := time.Since(start).Round(time.Second)
-// 	// _ = username
-// 	fmt.Printf("\r%s %s %s\r", streamer.SreamURL, hrSize, duration)
-// }
-
-// func finalLog(size int, streamer Streamer, start time.Time) {
-// 	hrSize := utils.FormatFileSize(size)
-// 	duration := time.Since(start).Round(time.Second)
-// 	_, _ = os.Stdout.WriteString("\r\n")
-// 	slog.Info("stop recording",
-// 		"streamer", streamer,
-// 		slog.String("size", hrSize),
-// 		slog.String("duration", duration.String()))
-// }
 
 // func (m Manager) finalRemux(filename string) {
 // 	_, _ = os.Stdout.WriteString("\r\n")
@@ -137,22 +116,17 @@ func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan
 	}
 loop:
 	for vid := range ch {
-		if !m.client.IsNewURL(vid) {
-			continue
-		}
 		buf, err := m.client.DownloadBuf(ctx, vid)
 		if err != nil {
+			slog.Error("DownloadBuf", "error", err.Error())
 			break loop
 		}
-		// var n int
 		n, err := pw.Write(buf)
 		if err != nil {
 			slog.Error("GetPlaylistVideo", "error", err.Error())
 			break loop
-		} else {
-			writedBytes += n
-			m.client.SetCheckURL(vid)
 		}
+		writedBytes += n
 	}
 	if err := pw.Close(); err != nil {
 		slog.Warn("pw.Close", slog.String("error", err.Error()))
