@@ -89,6 +89,28 @@ func (s *Set[T]) Set(value T) {
 	s.m[value] = probe
 }
 
+func (s *Set[T]) Values() []T {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var keys = slices.Collect(maps.Keys(s.m))
+	return keys
+}
+
+func (s *Set[T]) FilterNew(l []T) (values []T) {
+	values = make([]T, 0, len(l))
+	if len(l) == 0 {
+		return values
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, value := range l {
+		if _, ok := s.m[value]; !ok {
+			values = append(values, value)
+		}
+	}
+	return values
+}
+
 func (s *Set[T]) String() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

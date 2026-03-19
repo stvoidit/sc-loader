@@ -64,16 +64,7 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 }
 
 func (c *ClientAPI) filterParts(links []string) (newLinks []string) {
-	newLinks = make([]string, 0, len(links))
-	if links == nil {
-		return newLinks
-	}
-	for i := range links {
-		if c.IsNewURL(links[i]) {
-			newLinks = append(newLinks, links[i])
-		}
-	}
-	return newLinks
+	return c.writedParts.FilterNew(links)
 }
 
 func (c *ClientAPI) makeRequest(ctx context.Context, link string) (req *http.Request, err error) {
@@ -338,9 +329,9 @@ loop:
 				more = hlsQuery
 			}
 			if err != nil {
-				if !utils.IsCancel(err) {
-					slog.Error("GetPlaylistVideo", "error", err.Error())
-				}
+				// if !utils.IsCancel(err) {
+				slog.Error("GetPlaylistVideo", "error", err.Error())
+				// }
 				break loop
 			}
 			if len(vids) > 0 {
