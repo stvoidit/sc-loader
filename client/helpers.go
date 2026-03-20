@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"sc-loader/utils"
@@ -129,9 +130,7 @@ func makeVideoPlaylist(videoList string, more url.Values) (string, error) {
 		return videoList, err
 	}
 	query := link.Query()
-	for k, v := range more {
-		query.Set(k, v[0])
-	}
+	maps.Insert(query, maps.All(more))
 	link.RawQuery = query.Encode()
 	return link.String(), nil
 }
