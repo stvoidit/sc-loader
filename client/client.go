@@ -165,7 +165,10 @@ func (c *ClientAPI) InitClientConfig(ctx context.Context) (id models.InitialDyna
 	return idr.InitialDynamic, err
 }
 
-func (c *ClientAPI) GetRoomID(ctx context.Context, username string) (roomID int, online bool, err error) {
+func (c *ClientAPI) GetRoomID(
+	ctx context.Context,
+	username string,
+) (roomID int, online bool, err error) {
 	var userRoomUrl = makeRoomURL(c.cnf.Host, username)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
@@ -186,7 +189,10 @@ func (c *ClientAPI) GetRoomID(ctx context.Context, username string) (roomID int,
 	return rr.GetRoomId(), rr.IsOnline(), err
 }
 
-func (c *ClientAPI) GetRoomStatus(ctx context.Context, username string) (status string, online bool, err error) {
+func (c *ClientAPI) GetRoomStatus(
+	ctx context.Context,
+	username string,
+) (status string, online bool, err error) {
 	var userRoomUrl = makeRoomURL(c.cnf.Host, username)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
@@ -316,7 +322,7 @@ func (c *ClientAPI) startPlaylistLoop(
 	defer close(ch)
 	// var currentTry = 0
 	// const maxRetry = 30
-	const timeout = (time.Second * 2) + (time.Millisecond * 431)
+	const timeout = (time.Second * 1) + (time.Millisecond * 431)
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
 	var more url.Values
@@ -362,7 +368,11 @@ loop:
 	}
 }
 
-func (c *ClientAPI) StartPlaylistLoop(ctx context.Context, username, plist string, pkey utils.PSCH) <-chan string {
+func (c *ClientAPI) StartPlaylistLoop(
+	ctx context.Context,
+	username, plist string,
+	pkey utils.PSCH,
+) <-chan string {
 	var ch = make(chan string, 100)
 	go c.startPlaylistLoop(ctx, username, ch, plist, pkey)
 	return ch

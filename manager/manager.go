@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"sc-loader/client"
-	"sc-loader/utils"
 	"strings"
 	"time"
+
+	"sc-loader/client"
+	"sc-loader/utils"
 )
 
 func NewManager(ctx context.Context, config *utils.Config) (*Manager, error) {
@@ -100,6 +101,10 @@ func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan
 		"-c:v", "hevc_vaapi",
 		"-qp", "26",
 		"-profile:v", "main",
+		// "-reconnect_streamed", "1",
+		// "-reconnect_delay_max", "2",
+		// "-reconnect_at_eof", "1",
+		// "-reconnect", "1",
 		// "-sei", "+timing+recovery_point",
 		remuxFileName,
 	}

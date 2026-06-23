@@ -55,7 +55,13 @@ func reverseString(s string) string {
 
 func ParseRaw(r io.Reader) (variant, pkey string) {
 	s := bufio.NewScanner(r)
+	if s.Err() != nil {
+		return variant, pkey
+	}
 	for s.Scan() {
+		if s.Err() != nil {
+			return variant, pkey
+		}
 		line := s.Text()
 		if afterCut, ok := strings.CutPrefix(line, _mouflon_psch); IsEmpty(pkey) && ok {
 			pkey = afterCut
@@ -99,7 +105,13 @@ func DecodePart(link string, psch [32]byte) (string, error) {
 func DecodeRaw(r io.Reader, psch PSCH) (vids []string, hlsQuery url.Values, err error) {
 	vids = make([]string, 0, 4)
 	s := bufio.NewScanner(r)
+	if s.Err() != nil {
+		return nil, nil, err
+	}
 	for s.Scan() {
+		if s.Err() != nil {
+			return nil, nil, err
+		}
 		line := s.Text()
 		if after, ok := strings.CutPrefix(line, _map_uri); ok {
 			vids = append(vids, strings.Trim(after, `"`))
