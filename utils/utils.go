@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"slices"
+	"sync"
 )
 
 func SaveFile(filename string, rc io.ReadCloser) io.ReadCloser {
@@ -64,19 +65,56 @@ type Probe struct{}
 
 var probe = Probe{}
 
-type Set[T comparable] map[T]Probe
-
-func (s Set[T]) Has(value T) (ok bool) {
-	_, ok = s[value]
-	return
-}
-func (s Set[T]) Set(value T) (ok bool) {
-	s[value] = probe
-	return
+type Set[T comparable] struct {
+	m  map[T]Probe
+	mu sync.RWMutex
 }
 
-func (s Set[T]) String() string {
-	var keys = slices.Collect(maps.Keys(s))
+func NewSet[T comparable]() Set[T] {
+	return Set[T]{
+		m:  make(map[T]Probe),
+		mu: sync.RWMutex{},
+	}
+}
+
+func (s *Set[T]) Has(value T) (ok bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, ok = s.m[value]
+	return
+}
+func (s *Set[T]) Set(value T) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m[value] = probe
+}
+
+func (s *Set[T]) Values() []T {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var keys = slices.Collect(maps.Keys(s.m))
+	return keys
+}
+
+func (s *Set[T]) FilterNew(l []T) (values []T) {
+	values = make([]T, 0, len(l))
+	if len(l) == 0 {
+		return values
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, value := range l {
+		if _, ok := s.m[value]; !ok {
+			values = append(values, value)
+		}
+	}
+	return values
+}
+
+func (s *Set[T]) String() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var keys = slices.Collect(maps.Keys(s.m))
 	out, _ := json.Marshal(keys)
 	return string(out)
 }

@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const defaultFilename = "config.json"
@@ -104,6 +103,7 @@ func (cnf *Config) checkFolder() (err error) {
 	if err != nil {
 		return err
 	}
+	slog.Debug("checkFolder", slog.String("cnf.Folder", cnf.Folder))
 	if err := os.MkdirAll(cnf.Folder, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -122,11 +122,12 @@ func (cnf Config) String() string {
 	return sb.String()
 }
 
-func (cnf Config) CreateVideoFile(username string) (file *os.File, err error) {
-	const format = "20060102-150405"
-	timeSuffix := time.Now().Format(format)
-	filename := username + "_" + timeSuffix + "_tmp.mp4"
-	fullPath := filepath.Join(cnf.Folder, filename)
+func (cnf Config) MakeFilePath(filename string) (fullPath string) {
+	return filepath.Join(cnf.Folder, filename)
+}
+
+func (cnf Config) CreateVideoFile(filename string) (file *os.File, err error) {
+	fullPath := cnf.MakeFilePath(filename)
 	return os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0644)
 }
 

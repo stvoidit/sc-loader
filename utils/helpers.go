@@ -25,6 +25,15 @@ func IsCancel(err error) bool {
 	return errors.Is(err, context.Canceled) || strings.Contains(err.Error(), interroptErr)
 }
 
+func DeferClose(ic io.Closer) {
+	if ic == nil {
+		return
+	}
+	if err := ic.Close(); err != nil {
+		slog.Error("DeferCloseReader", slog.String("error", err.Error()))
+	}
+}
+
 func DeferCloseReader(rc io.ReadCloser) {
 	if rc == nil {
 		return

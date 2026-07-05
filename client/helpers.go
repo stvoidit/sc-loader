@@ -2,10 +2,12 @@ package client
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"sc-loader/utils"
@@ -34,6 +36,20 @@ func unzipResponse(response *http.Response) (err error) {
 			return err
 		}
 		response.Body = io.NopCloser(gz)
+		response.Header.Del("Content-Encoding")
+		response.Uncompressed = true
+		return nil
+	case "deflate":
+		fr := flate.NewReader(response.Body)
+		defer fr.Close()
+		b, err := io.ReadAll(fr)
+		if err != nil {
+			return err
+		}
+		if err := response.Body.Close(); err != nil {
+			return err
+		}
+		response.Body = io.NopCloser(bytes.NewReader(b))
 		response.Header.Del("Content-Encoding")
 		response.Uncompressed = true
 		return nil
@@ -66,9 +82,10 @@ var (
 
 func makeConfigURL(host string) string {
 	link := url.URL{
-		Scheme: scheme,
-		Host:   host,
-		Path:   endpointConfig,
+		Scheme:   scheme,
+		Host:     host,
+		Path:     endpointConfig,
+		RawQuery: "requestPath=/",
 	}
 	return link.String()
 }
@@ -113,9 +130,7 @@ func makeVideoPlaylist(videoList string, more url.Values) (string, error) {
 		return videoList, err
 	}
 	query := link.Query()
-	for k, v := range more {
-		query.Set(k, v[0])
-	}
+	maps.Insert(query, maps.All(more))
 	link.RawQuery = query.Encode()
 	return link.String(), nil
 }

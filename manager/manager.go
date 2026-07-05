@@ -2,22 +2,22 @@ package manager
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
-	"sc-loader/client"
-	"sc-loader/utils"
 	"strings"
 	"time"
+
+	"sc-loader/client"
+	"sc-loader/utils"
 )
 
-func NewManager(ctx context.Context, client *client.ClientAPI, config *utils.Config) (*Manager, error) {
+func NewManager(ctx context.Context, config *utils.Config) (*Manager, error) {
 	prog, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		return nil, err
 	}
+	client := client.NewClient(config)
 	InitialConfig, err := client.InitClientConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -39,85 +39,109 @@ type Manager struct {
 	bestCDN string
 }
 
-func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (err error) {
-	sl := slog.With("streamer", streamer)
+func (m Manager) GetFullPathVideoFile(streamer Streamer) string {
+	filename := streamer.MakeFilename()
+	return m.config.MakeFilePath(filename)
+}
+
+func (m *Manager) RecordStream(
+	ctx context.Context,
+	streamer Streamer,
+) (writedBytes int, err error) {
 	roomID, online, err := m.client.GetRoomID(ctx, streamer.Username)
 	if err != nil {
-		sl.Error("main", slog.String("error", err.Error()))
-		return err
+		slog.Error("main", "streamer", streamer, slog.String("error", err.Error()))
+		return writedBytes, err
 	}
 	if !online {
-		sl.Warn("main", slog.String("status", "offline"))
-		return err
+		slog.Warn("main", "streamer", streamer, slog.String("status", "offline"))
+		return writedBytes, err
 	}
 	slog.Debug("main", slog.Int("roomID", roomID), slog.String("cdn", m.bestCDN))
-
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		if status, online, err := m.client.GetRoomStatus(ctx, streamer.Username); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Error("GetRoomStatus", slog.String("error", err.Error()))
-		} else {
-			slog.Info("GetRoomStatus", slog.Bool("online", online), slog.String("status", status))
-		}
-	}()
-
 	plist, pkey, err := m.client.GetPlaylistVariants(ctx, m.bestCDN, roomID)
 	if err != nil {
 		slog.Error("main.GetPlaylistVariants", slog.String("error", err.Error()))
-		return err
+		return writedBytes, err
 	}
 	slog.Debug("main", "plist", plist)
 	slog.Info("RecordStream", slog.String("cdn", m.bestCDN))
-
-	f, err := m.config.CreateVideoFile(streamer.Username)
-	if err != nil {
-		return err
-	}
-	defer m.finalRemux(f.Name())
-	defer utils.DeferCloseReader(f)
-
-	var start = time.Now()
+	outputFilename := m.GetFullPathVideoFile(streamer)
 	ch := m.client.StartPlaylistLoop(ctx, streamer.Username, plist, pkey)
-
-	var writedBytes int
-	for vid := range ch {
-		if n, err := m.client.Download(ctx, f, vid); err != nil && !utils.IsCancel(err) {
-			slog.Error("GetPlaylistVideo", "error", err.Error())
-			return err
-		} else {
-			writedBytes += n
-		}
-		logStat(writedBytes, streamer, start)
-	}
-	return err
+	return m.StartPipeFFmpeg(ctx, outputFilename, ch)
 }
 
-func logStat(size int, streamer Streamer, start time.Time) {
-	hrSize := utils.FormatFileSize(size)
-	duration := time.Since(start).Round(time.Second)
-	// _ = username
-	fmt.Printf("\r%s %s %s\r", streamer.SreamURL, hrSize, duration)
-}
+// func (m Manager) finalRemux(filename string) {
+// 	_, _ = os.Stdout.WriteString("\r\n")
+// 	remuxFileName := strings.Replace(filename, "_tmp", "", 1)
+// 	args := []string{
+// 		"-hide_banner", "-v", "error", "-stats",
+// 		"-i", filename, "-c", "copy",
+// 		"-movflags", "+faststart",
+// 		remuxFileName,
+// 	}
+// 	cmd := exec.Command(m.ffmpeg, args...)
+// 	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stdout
+// 	if err := cmd.Run(); err != nil {
+// 		slog.Error("finalRemux.Run", slog.String("error", err.Error()), slog.String("filename", filename))
+// 		return
+// 	}
+// 	if err := os.Remove(filename); err != nil {
+// 		slog.Error("fRemoven", slog.String("error", err.Error()), slog.String("filename", filename))
+// 		return
+// 	}
+// 	slog.Info("finalRemux", slog.String("filename", remuxFileName))
+// }
 
-func (m Manager) finalRemux(filename string) {
-	_, _ = os.Stdout.WriteString("\r\n")
+func (m Manager) StartPipeFFmpeg(
+	ctx context.Context,
+	filename string,
+	ch <-chan string,
+) (writedBytes int, err error) {
 	remuxFileName := strings.Replace(filename, "_tmp", "", 1)
 	args := []string{
+		"-vaapi_device", "/dev/dri/renderD128",
+		"-hwaccel", "vaapi",
 		"-hide_banner", "-v", "error", "-stats",
-		"-i", filename, "-c", "copy",
-		"-movflags", "+faststart",
+		"-i", "-",
+		"-c:a", "copy",
+		"-vf", "format=nv12|vaapi,hwupload",
+		"-c:v", "hevc_vaapi",
+		"-qp", "31",
+		"-profile:v", "main",
+		// "-reconnect_streamed", "1",
+		// "-reconnect_delay_max", "2",
+		// "-reconnect_at_eof", "1",
+		// "-reconnect", "1",
+		// "-sei", "+timing+recovery_point",
 		remuxFileName,
 	}
 	cmd := exec.Command(m.ffmpeg, args...)
-	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stdout
-	if err := cmd.Run(); err != nil {
-		slog.Error("finalRemux.Run", slog.String("error", err.Error()), slog.String("filename", filename))
-		return
+	cmd.WaitDelay = time.Second * 10
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	pw, err := cmd.StdinPipe()
+	if err != nil {
+		return writedBytes, err
 	}
-	if err := os.Remove(filename); err != nil {
-		slog.Error("fRemoven", slog.String("error", err.Error()), slog.String("filename", filename))
-		return
+	if err := cmd.Start(); err != nil {
+		return writedBytes, err
 	}
-	slog.Info("finalRemux", slog.String("filename", remuxFileName))
+loop:
+	for vid := range ch {
+		buf, err := m.client.DownloadBuf(ctx, vid)
+		if err != nil {
+			slog.Error("DownloadBuf", "error", err.Error())
+			break loop
+		}
+		n, err := pw.Write(buf)
+		if err != nil {
+			slog.Error("GetPlaylistVideo", "error", err.Error())
+			break loop
+		}
+		writedBytes += n
+	}
+	if err := pw.Close(); err != nil {
+		slog.Warn("pw.Close", slog.String("error", err.Error()))
+	}
+	return writedBytes, cmd.Wait()
 }

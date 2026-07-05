@@ -50,7 +50,7 @@ func (c *ClientAPI) probeHTTPS(ctx context.Context, cdn *SrvCDN, timeout time.Du
 	}
 }
 
-func (c ClientAPI) PickBestHTTPS(ctx context.Context, domains []string) string {
+func (c *ClientAPI) PickBestHTTPS(ctx context.Context, domains []string) string {
 	const cycles = 3
 	timeout := 2 * time.Second
 	var wg sync.WaitGroup

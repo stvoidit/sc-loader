@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"sc-loader/client"
 	"sc-loader/manager"
 	"sc-loader/utils"
 	"time"
@@ -27,8 +26,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	slog.Debug("LoadConfig", slog.Any("config", config))
 	if len(os.Args) < 2 {
 		log.Fatal("please set username")
+	}
+	if config.Debug {
+		logLevel = slog.LevelDebug
+		slog.SetLogLoggerLevel(logLevel)
 	}
 	streamer, err := manager.ParseUsername(os.Args[1], config.Host)
 	if err != nil {
@@ -46,20 +50,17 @@ func main() {
 		outs = append(outs, f)
 	}
 	slog.SetDefault(utils.NewSloglogger(logLevel, outs...))
-	defer func() {
-		slog.Info("stop", "streamer", streamer)
-	}()
-	if config.Debug {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
-	}
-	client := client.NewClient(config)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	manager, err := manager.NewManager(ctx, client, config)
+
+	manager, err := manager.NewManager(ctx, config)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := manager.RecordStream(ctx, streamer); err != nil {
+	writedBytes, err := manager.RecordStream(ctx, streamer)
+	if err != nil && !utils.IsCancel(err) {
 		slog.Error("RecordStream", slog.String("error", err.Error()))
 	}
+	slog.Info("file size", slog.String("size", utils.FormatFileSize(writedBytes)))
+	slog.Info("process done", "streamer", streamer)
 }
