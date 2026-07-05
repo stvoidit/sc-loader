@@ -26,7 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	slog.Info("LoadConfig", slog.Any("config", config))
+	slog.Debug("LoadConfig", slog.Any("config", config))
 	if len(os.Args) < 2 {
 		log.Fatal("please set username")
 	}
