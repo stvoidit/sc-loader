@@ -230,6 +230,9 @@ func (c *ClientAPI) GetPlaylistVariants(
 	if err != nil {
 		return playlist, psch, err
 	}
+	if res.StatusCode != http.StatusOK {
+		return playlist, psch, errors.New("404")
+	}
 	variant, pkey := utils.ParseRaw(res.Body)
 	if utils.IsEmpty(pkey) {
 		return playlist, psch, ErrPKeyNotFound
@@ -322,7 +325,7 @@ func (c *ClientAPI) startPlaylistLoop(
 	defer close(ch)
 	// var currentTry = 0
 	// const maxRetry = 30
-	const timeout = (time.Second * 1) + (time.Millisecond * 431)
+	const timeout = (time.Second * 3) + (time.Millisecond * 431)
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
 	var more url.Values
@@ -335,6 +338,7 @@ loop:
 			break loop
 		case <-ticker.C:
 			vids, hlsQuery, err := c.GetPlaylistVideo(ctx, plist, pkey, more)
+			slog.Debug("GetPlaylistVideo", slog.Any("vids", vids), slog.Any("hlsQuery", hlsQuery))
 			if len(hlsQuery) > 0 {
 				more = hlsQuery
 			} else {

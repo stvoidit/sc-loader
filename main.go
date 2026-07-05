@@ -26,8 +26,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	slog.Info("LoadConfig", slog.Any("config", config))
 	if len(os.Args) < 2 {
 		log.Fatal("please set username")
+	}
+	if config.Debug {
+		logLevel = slog.LevelDebug
+		slog.SetLogLoggerLevel(logLevel)
 	}
 	streamer, err := manager.ParseUsername(os.Args[1], config.Host)
 	if err != nil {
@@ -45,9 +50,6 @@ func main() {
 		outs = append(outs, f)
 	}
 	slog.SetDefault(utils.NewSloglogger(logLevel, outs...))
-	if config.Debug {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
-	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 

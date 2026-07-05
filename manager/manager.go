@@ -44,7 +44,10 @@ func (m Manager) GetFullPathVideoFile(streamer Streamer) string {
 	return m.config.MakeFilePath(filename)
 }
 
-func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (writedBytes int, err error) {
+func (m *Manager) RecordStream(
+	ctx context.Context,
+	streamer Streamer,
+) (writedBytes int, err error) {
 	roomID, online, err := m.client.GetRoomID(ctx, streamer.Username)
 	if err != nil {
 		slog.Error("main", "streamer", streamer, slog.String("error", err.Error()))
@@ -89,18 +92,22 @@ func (m *Manager) RecordStream(ctx context.Context, streamer Streamer) (writedBy
 // 	slog.Info("finalRemux", slog.String("filename", remuxFileName))
 // }
 
-func (m Manager) StartPipeFFmpeg(ctx context.Context, filename string, ch <-chan string) (writedBytes int, err error) {
+func (m Manager) StartPipeFFmpeg(
+	ctx context.Context,
+	filename string,
+	ch <-chan string,
+) (writedBytes int, err error) {
 	remuxFileName := strings.Replace(filename, "_tmp", "", 1)
 	args := []string{
-		"-vaapi_device", "/dev/dri/renderD128",
-		"-hwaccel", "vaapi",
+		// "-vaapi_device", "/dev/dri/renderD128",
+		// "-hwaccel", "vaapi",
 		"-hide_banner", "-v", "error", "-stats",
 		"-i", "-",
-		"-c:a", "copy",
-		"-vf", "format=nv12|vaapi,hwupload",
-		"-c:v", "hevc_vaapi",
-		"-qp", "26",
-		"-profile:v", "main",
+		// "-c:a", "copy",
+		// "-vf", "format=nv12|vaapi,hwupload",
+		// "-c:v", "hevc_vaapi",
+		// "-qp", "26",
+		// "-profile:v", "main",
 		// "-reconnect_streamed", "1",
 		// "-reconnect_delay_max", "2",
 		// "-reconnect_at_eof", "1",

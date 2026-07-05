@@ -103,6 +103,7 @@ func (cnf *Config) checkFolder() (err error) {
 	if err != nil {
 		return err
 	}
+	slog.Debug("checkFolder", slog.String("cnf.Folder", cnf.Folder))
 	if err := os.MkdirAll(cnf.Folder, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
