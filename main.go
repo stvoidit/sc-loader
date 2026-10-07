@@ -26,19 +26,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	slog.Debug("LoadConfig", slog.Any("config", config))
-	if len(os.Args) < 2 {
-		log.Fatal("please set username")
-	}
 	if config.Debug {
 		logLevel = slog.LevelDebug
 		slog.SetLogLoggerLevel(logLevel)
 	}
-	streamer, err := manager.ParseUsername(os.Args[1], config.Host)
+	slog.Debug("LoadConfig", slog.Any("config", config))
+	var link string
+	if len(os.Args) < 2 {
+		log.Fatal("please set username")
+	} else {
+		link = os.Args[1]
+	}
+	streamer, err := manager.ParseUsername(link, config.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	outs := []io.Writer{os.Stderr}
 	if logLevel == slog.LevelDebug {
 		logname := time.Now().Format(time.RFC3339)

@@ -62,6 +62,7 @@ const (
 	scheme           = "https"
 	endpointConfig   = `/api/front/v3/config/initial-dynamic`
 	endpointRoom     = `/api/front/v2/models/username/%s/cam`
+	endpointUserID   = `/api/front/users/user-ids/%s`
 	endpointPlayList = `/hls/%d/master/%d_auto.m3u8`
 )
 
@@ -98,6 +99,15 @@ func makeRoomURL(host, username string) string {
 		Path:     fmt.Sprintf(endpointRoom, username),
 		RawQuery: roomQuery,
 	})
+	return link.String()
+}
+
+func makeUserIDURL(host, username string) string {
+	link := url.URL{
+		Scheme: scheme,
+		Host:   host,
+		Path:   fmt.Sprintf(endpointUserID, username),
+	}
 	return link.String()
 }
 

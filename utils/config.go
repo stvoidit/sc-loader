@@ -98,6 +98,15 @@ type Config struct {
 	CacheKeys KeysDRM           `json:"-"`
 }
 
+func (c Config) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Bool("debug", c.Debug),
+		slog.String("host", c.Host),
+		slog.String("folder", c.Folder),
+		slog.Any("keys", c.Keys),
+	)
+}
+
 func (cnf *Config) checkFolder() (err error) {
 	cnf.Folder, err = filepath.Abs(cnf.Folder)
 	if err != nil {

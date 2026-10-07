@@ -169,7 +169,7 @@ func (c *ClientAPI) GetRoomID(
 	ctx context.Context,
 	username string,
 ) (roomID int, online bool, err error) {
-	var userRoomUrl = makeRoomURL(c.cnf.Host, username)
+	var userRoomUrl = makeUserIDURL(c.cnf.Host, username)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
 	if err != nil {
@@ -182,18 +182,25 @@ func (c *ClientAPI) GetRoomID(
 	}
 	defer utils.DeferCloseReader(res.Body)
 	// res.Body = utils.SaveFile("room.json", res.Body)
-	var rr models.RoomResponse
+	// os.Exit(0)
+	// var rr models.RoomResponse
+	var rr map[string]int
 	if err := json.UnmarshalRead(res.Body, &rr); err != nil {
 		return -1, false, err
 	}
-	return rr.GetRoomId(), rr.IsOnline(), err
+	id, ok := rr["id"]
+	if !ok {
+		return -1, false, errors.New("room id not found")
+	}
+	// return rr.GetRoomId(), rr.IsOnline(), err
+	return id, true, err
 }
 
 func (c *ClientAPI) GetRoomStatus(
 	ctx context.Context,
 	username string,
 ) (status string, online bool, err error) {
-	var userRoomUrl = makeRoomURL(c.cnf.Host, username)
+	var userRoomUrl = makeUserIDURL(c.cnf.Host, username)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
 	if err != nil {
