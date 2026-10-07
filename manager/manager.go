@@ -104,7 +104,7 @@ func (m Manager) StartPipeFFmpeg(
 		"-hide_banner", "-v", "error", "-stats",
 		"-i", "-",
 		"-c:a", "copy",
-		"-vf", "format=nv12|vaapi,hwupload",
+		"-vf", "pad=ceil(iw/16)*16:ceil(ih/16)*16:0:0:color=black,format=nv12,hwupload",
 		"-c:v", "hevc_vaapi",
 		"-qp", "31",
 		"-profile:v", "main",

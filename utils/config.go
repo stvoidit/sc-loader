@@ -98,12 +98,12 @@ type Config struct {
 	CacheKeys KeysDRM           `json:"-"`
 }
 
-func (c Config) LogValue() slog.Value {
+func (cnf Config) LogValue() slog.Value {
 	return slog.GroupValue(
-		slog.Bool("debug", c.Debug),
-		slog.String("host", c.Host),
-		slog.String("folder", c.Folder),
-		slog.Any("keys", c.Keys),
+		slog.Bool("debug", cnf.Debug),
+		slog.String("host", cnf.Host),
+		slog.String("folder", cnf.Folder),
+		slog.Any("keys", cnf.Keys),
 	)
 }
 
