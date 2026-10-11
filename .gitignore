@@ -5,3 +5,4 @@
 downloads
 tests
 *.log
+coverage.out
