@@ -27,6 +27,7 @@ type ClientAPI struct {
 	_c             *http.Client
 	cnf            *utils.Config
 	defaultHeaders http.Header
+	htmlHeaders    http.Header
 	writedParts    utils.Set[string]
 }
 
@@ -53,15 +54,24 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 		cnf:         cnf,
 		writedParts: utils.NewSet[string](),
 		defaultHeaders: http.Header{
-			"Accept":          []string{"*/*"},
-			`Accept-Language`: []string{`en-US`},
-			`Accept-Encoding`: []string{`gzip, deflate`},
-			`Sec-Fetch-Mode`:  []string{"cors"},
-			`Sec-Fetch-Site`:  []string{`same-origin`},
-			`Sec-GPC`:         []string{"1"},
+			"Accept":          []string{"application/json"},
+			"Accept-Language": []string{"en-US"},
+			"Accept-Encoding": []string{"gzip, deflate"},
+			"User-Agent":      []string{ua},
+		},
+		htmlHeaders: http.Header{
+			"Accept": []string{
+				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+			},
+			"Accept-Language": []string{"en-US"},
+			"Accept-Encoding": []string{"gzip, deflate"},
+			"Sec-Fetch-Mode":  []string{"navigate"},
+			"Sec-Fetch-Site":  []string{"same-origin"},
+			"Sec-Fetch-Dest":  []string{"document"},
+			"Sec-GPC":         []string{"1"},
 			"Origin":          []string{fmt.Sprintf(`https://%s`, cnf.Host)},
-			`Referer`:         []string{fmt.Sprintf(`https://%s/`, cnf.Host)},
-			`User-Agent`:      []string{ua},
+			"Referer":         []string{fmt.Sprintf(`https://%s/`, cnf.Host)},
+			"User-Agent":      []string{ua},
 		},
 	}
 }
@@ -96,7 +106,10 @@ func (c *ClientAPI) doGetRequest(req *http.Request) (res *http.Response, err err
 
 func (c *ClientAPI) Init(ctx context.Context) (cdnDomain string, err error) {
 	id, err := c.InitClientConfig(ctx)
-	return id.GetDomainCDN(), err
+	if err != nil {
+		return "", err
+	}
+	return id.GetDomainCDN()
 }
 
 func (c *ClientAPI) getFrontendVersion(ctx context.Context) error {
@@ -109,11 +122,7 @@ func (c *ClientAPI) getFrontendVersion(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("User-Agent", ua)
-	req.Header.Add("Accept", `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`)
-	req.Header.Add("Accept-Language", `en-US`)
-	req.Header.Add("Accept-Encoding", `gzip, deflate`)
-	req.Header.Add("Sec-GPC", "1")
+	req.Header = c.htmlHeaders.Clone()
 	res, err := c._c.Do(req)
 	if err != nil {
 		return err
@@ -199,8 +208,9 @@ func (c *ClientAPI) GetRoomID(
 func (c *ClientAPI) GetRoomStatus(
 	ctx context.Context,
 	username string,
+	roomID int,
 ) (status string, online bool, err error) {
-	var userRoomUrl = makeUserIDURL(c.cnf.Host, username)
+	var userRoomUrl = makeBroadcastURL(c.cnf.Host, roomID)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
 	if err != nil {
@@ -213,9 +223,9 @@ func (c *ClientAPI) GetRoomStatus(
 	}
 	defer utils.DeferCloseReader(res.Body)
 	// res.Body = utils.SaveFile("room.json", res.Body)
-	var rr models.RoomResponse
+	var rr models.Broadcast
 	if err := json.UnmarshalRead(res.Body, &rr); err != nil {
-		return "", false, err
+		return "", true, err
 	}
 	return rr.GetStatus(), rr.IsOnline(), err
 }
@@ -237,6 +247,7 @@ func (c *ClientAPI) GetPlaylistVariants(
 	if err != nil {
 		return playlist, psch, err
 	}
+	defer utils.DeferCloseReader(res.Body)
 	if res.StatusCode != http.StatusOK {
 		return playlist, psch, errors.New("404")
 	}
@@ -316,14 +327,12 @@ func (c *ClientAPI) DownloadBuf(ctx context.Context, link string) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-	if err := res.Body.Close(); err != nil {
-		return nil, err
-	}
 	return b, nil
 }
 
 func (c *ClientAPI) startPlaylistLoop(
 	ctx context.Context,
+	roomID int,
 	username string,
 	ch chan<- string,
 	plist string,
@@ -362,7 +371,7 @@ loop:
 					ch <- vids[i]
 				}
 			} else {
-				status, online, err := c.GetRoomStatus(ctx, username)
+				status, online, err := c.GetRoomStatus(ctx, username, roomID)
 				if err != nil {
 					if !utils.IsCancel(err) {
 						slog.Error("GetPlaylistVideo", "error", err.Error())
@@ -381,10 +390,11 @@ loop:
 
 func (c *ClientAPI) StartPlaylistLoop(
 	ctx context.Context,
+	roomID int,
 	username, plist string,
 	pkey utils.PSCH,
 ) <-chan string {
 	var ch = make(chan string, 100)
-	go c.startPlaylistLoop(ctx, username, ch, plist, pkey)
+	go c.startPlaylistLoop(ctx, roomID, username, ch, plist, pkey)
 	return ch
 }

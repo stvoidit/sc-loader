@@ -1,12 +1,10 @@
 package client
 
 import (
-	"bytes"
 	"compress/flate"
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"net/http"
 	"net/url"
@@ -24,34 +22,19 @@ func unzipResponse(response *http.Response) (err error) {
 	case "":
 		return nil
 	case "gzip":
-		b, err := io.ReadAll(response.Body)
+		gz, err := gzip.NewReader(response.Body)
 		if err != nil {
 			return err
 		}
-		if err := response.Body.Close(); err != nil {
-			return err
-		}
-		gz, err := gzip.NewReader(bytes.NewReader(b))
-		if err != nil {
-			return err
-		}
-		response.Body = io.NopCloser(gz)
-		response.Header.Del("Content-Encoding")
+		response.Body = gz
 		response.Uncompressed = true
+		response.Header.Del("Content-Encoding")
 		return nil
 	case "deflate":
 		fr := flate.NewReader(response.Body)
-		defer fr.Close()
-		b, err := io.ReadAll(fr)
-		if err != nil {
-			return err
-		}
-		if err := response.Body.Close(); err != nil {
-			return err
-		}
-		response.Body = io.NopCloser(bytes.NewReader(b))
-		response.Header.Del("Content-Encoding")
+		response.Body = fr
 		response.Uncompressed = true
+		response.Header.Del("Content-Encoding")
 		return nil
 	default:
 		return ErrUnknownCompressionMethod
@@ -59,11 +42,12 @@ func unzipResponse(response *http.Response) (err error) {
 }
 
 const (
-	scheme           = "https"
-	endpointConfig   = `/api/front/v3/config/initial-dynamic`
-	endpointRoom     = `/api/front/v2/models/username/%s/cam`
-	endpointUserID   = `/api/front/users/user-ids/%s`
-	endpointPlayList = `/hls/%d/master/%d_auto.m3u8`
+	scheme            = "https"
+	endpointConfig    = `/api/front/v3/config/initial-dynamic`
+	endpointRoom      = `/api/front/v2/models/username/%s/cam`
+	endpointUserID    = `/api/front/users/user-ids/%s`
+	endpointPlayList  = `/hls/%d/master/%d_auto.m3u8`
+	endpointBroadcast = `/api/front/v2/broadcasts/%d`
 )
 
 const (
@@ -99,6 +83,15 @@ func makeRoomURL(host, username string) string {
 		Path:     fmt.Sprintf(endpointRoom, username),
 		RawQuery: roomQuery,
 	})
+	return link.String()
+}
+
+func makeBroadcastURL(host string, roomId int) string {
+	link := url.URL{
+		Scheme: scheme,
+		Host:   host,
+		Path:   fmt.Sprintf(endpointBroadcast, roomId),
+	}
 	return link.String()
 }
 

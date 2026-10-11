@@ -1,10 +1,13 @@
 package models
 
 import (
+	"errors"
 	"math/rand/v2"
 	"regexp"
 	"time"
 )
+
+var domainFilterRegex = regexp.MustCompile(`\d+`)
 
 type InitialDynamicResponse struct {
 	InitialDynamic InitialDynamic `json:"initialDynamic"`
@@ -118,18 +121,19 @@ type Websocket struct {
 }
 
 func (id InitialDynamic) GetDomainsCDN() []string {
-	var rgx = regexp.MustCompile(`\d+`)
 	var cleaned = make([]string, 0, len(id.Players.CDNConfig))
 	for i := range id.Players.CDNConfig {
-		if !rgx.MatchString(id.Players.CDNConfig[i].Domain) {
+		if !domainFilterRegex.MatchString(id.Players.CDNConfig[i].Domain) {
 			cleaned = append(cleaned, id.Players.CDNConfig[i].Domain)
 		}
 	}
 	return cleaned
 }
 
-func (id InitialDynamic) GetDomainCDN() (domain string) {
+func (id InitialDynamic) GetDomainCDN() (domain string, err error) {
 	var cleaned = id.GetDomainsCDN()
-	return cleaned[rand.IntN(len(cleaned))]
-
+	if len(cleaned) == 0 {
+		return "", errors.New("no CDN domains available")
+	}
+	return cleaned[rand.IntN(len(cleaned))], nil
 }

@@ -2,6 +2,7 @@ package models
 
 import (
 	"strings"
+	"time"
 )
 
 type RoomResponse struct {
@@ -30,4 +31,57 @@ func (rr RoomResponse) IsOnline() bool {
 
 func (rr RoomResponse) GetStatus() string {
 	return rr.User.User.Status
+}
+
+type Broadcast struct {
+	Item struct {
+		AppType         string `json:"appType"`
+		IsApprovedModel bool   `json:"isApprovedModel"`
+		IsBadStream     bool   `json:"isBadStream"`
+		IsBlocked       bool   `json:"isBlocked"`
+		IsDeleted       bool   `json:"isDeleted"`
+		IsLive          bool   `json:"isLive"`
+		IsMicInactive   bool   `json:"isMicInactive"`
+		IsMobile        bool   `json:"isMobile"`
+		IsNonNude       bool   `json:"isNonNude"`
+		ModelID         int    `json:"modelId"`
+		Settings        struct {
+			AudioQuality struct {
+				Network string `json:"network"`
+				Stream  string `json:"stream"`
+			} `json:"audioQuality"`
+			Fps            int    `json:"fps"`
+			Height         int    `json:"height"`
+			IsBadStream    bool   `json:"isBadStream"`
+			IsMicInactive  bool   `json:"isMicInactive"`
+			IsSourcePreset bool   `json:"isSourcePreset"`
+			MediaTransport string `json:"mediaTransport"`
+			Presets        []any  `json:"presets"`
+			Video          struct {
+				BFrames     bool   `json:"bFrames"`
+				Bitrate     int    `json:"bitrate"`
+				Codec       string `json:"codec"`
+				KeyInterval int    `json:"keyInterval"`
+			} `json:"video"`
+			VideoQuality struct {
+				Network string `json:"network"`
+				Stream  string `json:"stream"`
+			} `json:"videoQuality"`
+			Width int `json:"width"`
+		} `json:"settings"`
+		SnapshotTimestamp int       `json:"snapshotTimestamp"`
+		Status            string    `json:"status"`
+		StatusChangedAt   time.Time `json:"statusChangedAt"`
+		StreamName        string    `json:"streamName"`
+		Username          string    `json:"username"`
+		WebRTCAppKey      string    `json:"webRTCAppKey"`
+	} `json:"item"`
+}
+
+func (b Broadcast) IsOnline() bool {
+	return b.Item.IsLive
+}
+
+func (b Broadcast) GetStatus() string {
+	return b.Item.Status
 }

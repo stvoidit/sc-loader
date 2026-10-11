@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -66,7 +67,7 @@ func (m *Manager) RecordStream(
 	slog.Debug("main", "plist", plist)
 	slog.Info("RecordStream", slog.String("cdn", m.bestCDN))
 	outputFilename := m.GetFullPathVideoFile(streamer)
-	ch := m.client.StartPlaylistLoop(ctx, streamer.Username, plist, pkey)
+	ch := m.client.StartPlaylistLoop(ctx, roomID, streamer.Username, plist, pkey)
 	return m.StartPipeFFmpeg(ctx, outputFilename, ch)
 }
 
@@ -97,6 +98,14 @@ func (m Manager) StartPipeFFmpeg(
 	filename string,
 	ch <-chan string,
 ) (writedBytes int, err error) {
+	cmd, pw, err := m.createFFmpegProcess(filename)
+	if err != nil {
+		return 0, err
+	}
+	return m.streamToFFmpeg(ctx, cmd, pw, ch)
+}
+
+func (m Manager) createFFmpegProcess(filename string) (*exec.Cmd, io.WriteCloser, error) {
 	remuxFileName := strings.Replace(filename, "_tmp", "", 1)
 	args := []string{
 		"-vaapi_device", "/dev/dri/renderD128",
@@ -121,11 +130,20 @@ func (m Manager) StartPipeFFmpeg(
 	cmd.Stderr = os.Stderr
 	pw, err := cmd.StdinPipe()
 	if err != nil {
-		return writedBytes, err
+		return nil, nil, err
 	}
 	if err := cmd.Start(); err != nil {
-		return writedBytes, err
+		return nil, nil, err
 	}
+	return cmd, pw, nil
+}
+
+func (m Manager) streamToFFmpeg(
+	ctx context.Context,
+	cmd *exec.Cmd,
+	pw io.WriteCloser,
+	ch <-chan string,
+) (writedBytes int, err error) {
 loop:
 	for vid := range ch {
 		buf, err := m.client.DownloadBuf(ctx, vid)
@@ -133,9 +151,9 @@ loop:
 			slog.Error("DownloadBuf", "error", err.Error())
 			break loop
 		}
-		n, err := pw.Write(buf)
-		if err != nil {
-			slog.Error("GetPlaylistVideo", "error", err.Error())
+		n, writeErr := pw.Write(buf)
+		if writeErr != nil {
+			slog.Error("pw.Write", "error", writeErr.Error())
 			break loop
 		}
 		writedBytes += n
