@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const ua = `Mozilla/5.0 (X11; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0`
+const ua = `Mozilla/5.0 (X11; Linux x86_64; rv:157.0) Gecko/20100101 Firefox/157.0`
 
 type Probe struct{}
 
