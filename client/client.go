@@ -40,7 +40,7 @@ func NewClient(cnf *utils.Config) *ClientAPI {
 		MaxIdleConns:        10,
 		IdleConnTimeout:     time.Millisecond * 200,
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: false,
 			MinVersion:         tls.VersionTLS13,
 		},
 	}
