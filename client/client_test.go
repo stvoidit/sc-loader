@@ -872,8 +872,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 		})
 		c, cnf := newTestClient(t, mux)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
@@ -900,8 +899,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 		})
 		c, cnf := newTestClient(t, mux)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
@@ -916,8 +914,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 		})
 		c, cnf := newTestClient(t, mux)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())

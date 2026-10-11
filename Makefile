@@ -1,6 +1,5 @@
 LOCAL_BIN:=${HOME}/.local/bin
 PROG_NAME:=sc-loader
-export GOEXPERIMENT=jsonv2
 
 fix:
 	@go fix ./...
