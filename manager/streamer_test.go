@@ -112,7 +112,13 @@ func TestParseUsernameEdgeCases(t *testing.T) {
 				t.Fatalf("ParseUsername(%q) error = %v", tt.arg, err)
 			}
 			if got.Username != tt.wantUser || got.SreamURL != tt.wantURL {
-				t.Errorf("ParseUsername(%q) = %+v, want {%s %s}", tt.arg, got, tt.wantUser, tt.wantURL)
+				t.Errorf(
+					"ParseUsername(%q) = %+v, want {%s %s}",
+					tt.arg,
+					got,
+					tt.wantUser,
+					tt.wantURL,
+				)
 			}
 		})
 	}

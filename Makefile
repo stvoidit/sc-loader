@@ -1,7 +1,12 @@
 LOCAL_BIN:=${HOME}/.local/bin
 PROG_NAME:=sc-loader
+GOLANGCI_LINT?=golangci-lint-v2
 
-fix:
+# golangci-lint fmt --stdin -E goimports,golines
+fmt:
+	@$(GOLANGCI_LINT) fmt -E goimports,golines ./...
+
+fix: fmt
 	@go fix ./...
 
 build: fix

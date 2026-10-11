@@ -170,11 +170,14 @@ func TestGetRoomID(t *testing.T) {
 		var gotPath string
 		var gotHeader http.Header
 		mux := http.NewServeMux()
-		mux.HandleFunc("/api/front/users/user-ids/alex", func(w http.ResponseWriter, r *http.Request) {
-			gotPath, gotHeader = r.URL.Path, r.Header.Clone()
-			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"id":11111111}`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/users/user-ids/alex",
+			func(w http.ResponseWriter, r *http.Request) {
+				gotPath, gotHeader = r.URL.Path, r.Header.Clone()
+				w.Header().Set("Content-Type", "application/json")
+				io.WriteString(w, `{"id":11111111}`) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		id, online, err := c.GetRoomID(ctx, "alex")
@@ -197,10 +200,13 @@ func TestGetRoomID(t *testing.T) {
 
 	t.Run("gzip response", func(t *testing.T) {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/api/front/users/user-ids/alex", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Write(gzipBytes(t, `{"id":777}`)) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/users/user-ids/alex",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Encoding", "gzip")
+				w.Write(gzipBytes(t, `{"id":777}`)) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		id, _, err := c.GetRoomID(ctx, "alex")
@@ -245,10 +251,13 @@ func TestGetRoomID(t *testing.T) {
 
 	t.Run("http 500", func(t *testing.T) {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/api/front/users/user-ids/alex", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-			io.WriteString(w, "internal error") //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/users/user-ids/alex",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				io.WriteString(w, "internal error") //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		id, online, err := c.GetRoomID(ctx, "alex")
@@ -279,10 +288,16 @@ func TestGetRoomStatus(t *testing.T) {
 	t.Run("online", func(t *testing.T) {
 		var gotPath string
 		mux := http.NewServeMux()
-		mux.HandleFunc("/api/front/v2/broadcasts/123", func(w http.ResponseWriter, r *http.Request) {
-			gotPath = r.URL.Path
-			io.WriteString(w, `{"item":{"isLive":true,"status":"public","modelId":5}}`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v2/broadcasts/123",
+			func(w http.ResponseWriter, r *http.Request) {
+				gotPath = r.URL.Path
+				io.WriteString(
+					w,
+					`{"item":{"isLive":true,"status":"public","modelId":5}}`,
+				) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		status, online, err := c.GetRoomStatus(ctx, "alex", testRoomID)
@@ -298,7 +313,10 @@ func TestGetRoomStatus(t *testing.T) {
 	})
 
 	t.Run("offline", func(t *testing.T) {
-		mux := jsonHandler("/api/front/v2/broadcasts/123", `{"item":{"isLive":false,"status":"offline"}}`)
+		mux := jsonHandler(
+			"/api/front/v2/broadcasts/123",
+			`{"item":{"isLive":false,"status":"offline"}}`,
+		)
 		c, _ := newTestClient(t, mux)
 
 		status, online, err := c.GetRoomStatus(ctx, "alex", testRoomID)
@@ -326,10 +344,13 @@ func TestGetRoomStatus(t *testing.T) {
 
 	t.Run("http 404 with json body", func(t *testing.T) {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/api/front/v2/broadcasts/123", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			io.WriteString(w, `{"error":"not found"}`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v2/broadcasts/123",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				io.WriteString(w, `{"error":"not found"}`) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		// код ответа не проверяется, поэтому тело разбирается как Broadcast
@@ -344,10 +365,13 @@ func TestGetRoomStatus(t *testing.T) {
 
 	t.Run("http 404 with html body", func(t *testing.T) {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/api/front/v2/broadcasts/123", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			io.WriteString(w, `<html>not found</html>`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v2/broadcasts/123",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				io.WriteString(w, `<html>not found</html>`) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		if _, _, err := c.GetRoomStatus(ctx, "alex", testRoomID); err == nil {
@@ -381,12 +405,18 @@ func TestInitClientConfig(t *testing.T) {
 				return
 			}
 			w.Header().Set("Content-Type", "text/html")
-			io.WriteString(w, "<html>\n<script>\nrelease_version: 2026.10.11\n</script>\n</html>") //nolint:errcheck
+			io.WriteString(
+				w,
+				"<html>\n<script>\nrelease_version: 2026.10.11\n</script>\n</html>",
+			) //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v3/config/initial-dynamic", func(w http.ResponseWriter, r *http.Request) {
-			configHeader = r.Header.Clone()
-			io.WriteString(w, initialDynamicJSON) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v3/config/initial-dynamic",
+			func(w http.ResponseWriter, r *http.Request) {
+				configHeader = r.Header.Clone()
+				io.WriteString(w, initialDynamicJSON) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		id, err := c.InitClientConfig(ctx)
@@ -412,9 +442,12 @@ func TestInitClientConfig(t *testing.T) {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, `release_version: 1.0`) //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v3/config/initial-dynamic", func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, initialDynamicJSON) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v3/config/initial-dynamic",
+			func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, initialDynamicJSON) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		domain, err := c.Init(ctx)
@@ -431,9 +464,12 @@ func TestInitClientConfig(t *testing.T) {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, `<html>nothing here</html>`) //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v3/config/initial-dynamic", func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, initialDynamicJSON) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v3/config/initial-dynamic",
+			func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, initialDynamicJSON) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		if _, err := c.InitClientConfig(ctx); err != nil {
@@ -449,10 +485,13 @@ func TestInitClientConfig(t *testing.T) {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, `release_version: 1.0`) //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v3/config/initial-dynamic", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("X-Api-Version", "v9")
-			io.WriteString(w, initialDynamicJSON) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v3/config/initial-dynamic",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Api-Version", "v9")
+				io.WriteString(w, initialDynamicJSON) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		if _, err := c.InitClientConfig(ctx); err != nil {
@@ -468,10 +507,13 @@ func TestInitClientConfig(t *testing.T) {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, `release_version: 1.0`) //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v3/config/initial-dynamic", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			io.WriteString(w, `service unavailable`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v3/config/initial-dynamic",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				io.WriteString(w, `service unavailable`) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 
 		if _, err := c.InitClientConfig(ctx); err == nil {
@@ -505,12 +547,15 @@ func TestGetPlaylistVariants(t *testing.T) {
 
 	newSrv := func(t *testing.T, status int, body string) *ClientAPI {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/hls/123/master/123_auto.m3u8", func(w http.ResponseWriter, r *http.Request) {
-			if status != http.StatusOK {
-				w.WriteHeader(status)
-			}
-			io.WriteString(w, body) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/hls/123/master/123_auto.m3u8",
+			func(w http.ResponseWriter, r *http.Request) {
+				if status != http.StatusOK {
+					w.WriteHeader(status)
+				}
+				io.WriteString(w, body) //nolint:errcheck
+			},
+		)
 		c, _ := newTestClient(t, mux)
 		return c
 	}
@@ -533,7 +578,8 @@ func TestGetPlaylistVariants(t *testing.T) {
 			t.Errorf("playlist path = %q", u.Path)
 		}
 		q := u.Query()
-		if q.Get("pkey") != testKey || q.Get("psch") != "v2" || q.Get("playlistType") != playlistTypeLowLatency {
+		if q.Get("pkey") != testKey || q.Get("psch") != "v2" ||
+			q.Get("playlistType") != playlistTypeLowLatency {
 			t.Errorf("playlist query = %v", q)
 		}
 	})
@@ -553,7 +599,14 @@ func TestGetPlaylistVariants(t *testing.T) {
 	t.Run("pkey not found", func(t *testing.T) {
 		c := newSrv(t, http.StatusOK, "#EXTM3U\n"+variant)
 
-		if _, _, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", testRoomID); !errors.Is(err, ErrPKeyNotFound) {
+		if _, _, err := c.GetPlaylistVariants(
+			ctx,
+			"doppiocdn.com",
+			testRoomID,
+		); !errors.Is(
+			err,
+			ErrPKeyNotFound,
+		) {
 			t.Errorf("error = %v, want %v", err, ErrPKeyNotFound)
 		}
 	})
@@ -561,7 +614,14 @@ func TestGetPlaylistVariants(t *testing.T) {
 	t.Run("unknown pkey", func(t *testing.T) {
 		c := newSrv(t, http.StatusOK, masterPlaylistBody(variant, "unknown-key"))
 
-		if _, _, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", testRoomID); !errors.Is(err, utils.ErrKeyNotFound) {
+		if _, _, err := c.GetPlaylistVariants(
+			ctx,
+			"doppiocdn.com",
+			testRoomID,
+		); !errors.Is(
+			err,
+			utils.ErrKeyNotFound,
+		) {
 			t.Errorf("error = %v, want %v", err, utils.ErrKeyNotFound)
 		}
 	})
@@ -592,7 +652,12 @@ func TestGetPlaylistVideo(t *testing.T) {
 		})
 		c, cnf = newTestClient(t, mux)
 
-		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
+		plist := fmt.Sprintf(
+			"https://%s/hls/%d/master/media.m3u8?pkey=%s",
+			cnf.Host,
+			testRoomID,
+			testKey,
+		)
 		more := url.Values{"_HLS_msn": {"100500"}}
 
 		vids, hlsQuery, err := c.GetPlaylistVideo(ctx, plist, testPSCH(), more)
@@ -633,7 +698,12 @@ func TestGetPlaylistVideo(t *testing.T) {
 		})
 		c, _ := newTestClient(t, mux)
 
-		vids, hlsQuery, err := c.GetPlaylistVideo(ctx, "https://x/hls/123/master/media.m3u8", testPSCH(), nil)
+		vids, hlsQuery, err := c.GetPlaylistVideo(
+			ctx,
+			"https://x/hls/123/master/media.m3u8",
+			testPSCH(),
+			nil,
+		)
 		if err != nil {
 			t.Fatalf("GetPlaylistVideo() error = %v", err)
 		}
@@ -649,7 +719,12 @@ func TestGetPlaylistVideo(t *testing.T) {
 		})
 		c, _ := newTestClient(t, mux)
 
-		if _, _, err := c.GetPlaylistVideo(ctx, "https://x/hls/123/master/media.m3u8", testPSCH(), nil); err == nil {
+		if _, _, err := c.GetPlaylistVideo(
+			ctx,
+			"https://x/hls/123/master/media.m3u8",
+			testPSCH(),
+			nil,
+		); err == nil {
 			t.Error("GetPlaylistVideo() error = nil, want decode error")
 		}
 	})
@@ -659,7 +734,12 @@ func TestGetPlaylistVideo(t *testing.T) {
 		c._c.Transport = roundTripperFunc(func(*http.Request) (*http.Response, error) {
 			return nil, errors.New("connection reset by peer")
 		})
-		if _, _, err := c.GetPlaylistVideo(ctx, "https://x/media.m3u8", testPSCH(), nil); err == nil {
+		if _, _, err := c.GetPlaylistVideo(
+			ctx,
+			"https://x/media.m3u8",
+			testPSCH(),
+			nil,
+		); err == nil {
 			t.Error("GetPlaylistVideo() error = nil, want error")
 		}
 	})
@@ -819,15 +899,23 @@ func TestStartPlaylistLoop(t *testing.T) {
 		mux.HandleFunc("/hls/123/master/media.m3u8", func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, mediaPlaylistBody(c.cnf.Host)) //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v2/broadcasts/123", func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, `{"item":{"isLive":true,"status":"public"}}`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v2/broadcasts/123",
+			func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, `{"item":{"isLive":true,"status":"public"}}`) //nolint:errcheck
+			},
+		)
 		c, cnf = newTestClient(t, mux)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
+		plist := fmt.Sprintf(
+			"https://%s/hls/%d/master/media.m3u8?pkey=%s",
+			cnf.Host,
+			testRoomID,
+			testKey,
+		)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
 
 		want := mediaPart(cnf.Host, testDecrypted)
@@ -867,14 +955,22 @@ func TestStartPlaylistLoop(t *testing.T) {
 			// плейлист без новых сегментов
 			io.WriteString(w, "#EXTM3U\n#EXTINF:2.0,\n") //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v2/broadcasts/123", func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, `{"item":{"isLive":false,"status":"offline"}}`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v2/broadcasts/123",
+			func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, `{"item":{"isLive":false,"status":"offline"}}`) //nolint:errcheck
+			},
+		)
 		c, cnf := newTestClient(t, mux)
 
 		ctx := t.Context()
 
-		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
+		plist := fmt.Sprintf(
+			"https://%s/hls/%d/master/media.m3u8?pkey=%s",
+			cnf.Host,
+			testRoomID,
+			testKey,
+		)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
 
 		select {
@@ -894,14 +990,22 @@ func TestStartPlaylistLoop(t *testing.T) {
 		mux.HandleFunc("/hls/123/master/media.m3u8", func(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, "#EXTM3U\n#EXTINF:2.0,\n") //nolint:errcheck
 		})
-		mux.HandleFunc("/api/front/v2/broadcasts/123", func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, `<html>backend error</html>`) //nolint:errcheck
-		})
+		mux.HandleFunc(
+			"/api/front/v2/broadcasts/123",
+			func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, `<html>backend error</html>`) //nolint:errcheck
+			},
+		)
 		c, cnf := newTestClient(t, mux)
 
 		ctx := t.Context()
 
-		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
+		plist := fmt.Sprintf(
+			"https://%s/hls/%d/master/media.m3u8?pkey=%s",
+			cnf.Host,
+			testRoomID,
+			testKey,
+		)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
 		waitClosed(t, ch)
 	})
@@ -916,7 +1020,12 @@ func TestStartPlaylistLoop(t *testing.T) {
 
 		ctx := t.Context()
 
-		plist := fmt.Sprintf("https://%s/hls/%d/master/media.m3u8?pkey=%s", cnf.Host, testRoomID, testKey)
+		plist := fmt.Sprintf(
+			"https://%s/hls/%d/master/media.m3u8?pkey=%s",
+			cnf.Host,
+			testRoomID,
+			testKey,
+		)
 		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
 		waitClosed(t, ch)
 	})
@@ -983,7 +1092,12 @@ func TestGetFrontendVersionBrokenEncoding(t *testing.T) {
 	})
 	c, _ := newTestClient(t, mux)
 
-	if _, err := c.InitClientConfig(context.Background()); !errors.Is(err, ErrUnknownCompressionMethod) {
+	if _, err := c.InitClientConfig(
+		context.Background(),
+	); !errors.Is(
+		err,
+		ErrUnknownCompressionMethod,
+	) {
 		t.Errorf("InitClientConfig() error = %v, want %v", err, ErrUnknownCompressionMethod)
 	}
 }

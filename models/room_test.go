@@ -115,7 +115,10 @@ func TestBroadcastJSON(t *testing.T) {
 
 func TestBroadcastOffline(t *testing.T) {
 	var b Broadcast
-	if err := json.Unmarshal([]byte(`{"item":{"isLive":false,"status":"offline"}}`), &b); err != nil {
+	if err := json.Unmarshal(
+		[]byte(`{"item":{"isLive":false,"status":"offline"}}`),
+		&b,
+	); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
 	if b.IsOnline() {

@@ -47,7 +47,11 @@ func TestIsCancel(t *testing.T) {
 		{"canceled", context.Canceled, true},
 		{"wrapped canceled", fmt.Errorf("download: %w", context.Canceled), true},
 		{"interrupt signal", errors.New("interrupt signal received"), true},
-		{"wrapped interrupt", fmt.Errorf("main: %w", errors.New("interrupt signal received")), true},
+		{
+			"wrapped interrupt",
+			fmt.Errorf("main: %w", errors.New("interrupt signal received")),
+			true,
+		},
 		{"deadline", context.DeadlineExceeded, false},
 		{"other", errors.New("connection refused"), false},
 	}

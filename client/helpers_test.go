@@ -199,7 +199,10 @@ func TestMakeRoomURL(t *testing.T) {
 }
 
 func TestMakeMasterPlaylist(t *testing.T) {
-	got, err := makeMasterPlaylist("https://edge-hls.example.com/hls/123/master/123_auto.m3u8", "PKEY")
+	got, err := makeMasterPlaylist(
+		"https://edge-hls.example.com/hls/123/master/123_auto.m3u8",
+		"PKEY",
+	)
 	if err != nil {
 		t.Fatalf("makeMasterPlaylist() error = %v", err)
 	}
@@ -208,12 +211,16 @@ func TestMakeMasterPlaylist(t *testing.T) {
 		t.Fatal(err)
 	}
 	q := u.Query()
-	if q.Get("pkey") != "PKEY" || q.Get("psch") != "v2" || q.Get("playlistType") != playlistTypeLowLatency {
+	if q.Get("pkey") != "PKEY" || q.Get("psch") != "v2" ||
+		q.Get("playlistType") != playlistTypeLowLatency {
 		t.Errorf("query = %v, want pkey/psch/playlistType", q)
 	}
 
 	t.Run("keeps existing query", func(t *testing.T) {
-		got, err := makeMasterPlaylist("https://example.com/a.m3u8?playlistType=lowLatency&x=1", "K")
+		got, err := makeMasterPlaylist(
+			"https://example.com/a.m3u8?playlistType=lowLatency&x=1",
+			"K",
+		)
 		if err != nil {
 			t.Fatal(err)
 		}

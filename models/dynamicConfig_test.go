@@ -132,7 +132,10 @@ func TestInitialDynamicResponseJSON(t *testing.T) {
 	if !id.Players.IsHLSLLEnabled || id.Players.PlayoutDelayHint != 0.5 {
 		t.Errorf("Players = %+v, want isHLSLLEnabled/playoutDelayHint", id.Players)
 	}
-	if got := id.GetDomainsCDN(); !slices.Equal(got, []string{"doppiocdn.com", "edge-hls.doppiocdn.com"}) {
+	if got := id.GetDomainsCDN(); !slices.Equal(
+		got,
+		[]string{"doppiocdn.com", "edge-hls.doppiocdn.com"},
+	) {
 		t.Errorf("GetDomainsCDN() = %v, want [doppiocdn.com edge-hls.doppiocdn.com]", got)
 	}
 	if res := id.Players.BroadcastResolutionList["720p"]; res.Width != 1280 || !res.IsEnabled {

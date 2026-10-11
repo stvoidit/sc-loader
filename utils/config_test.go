@@ -189,7 +189,12 @@ func TestConfigCreateVideoFile(t *testing.T) {
 }
 
 func TestConfigString(t *testing.T) {
-	cnf := Config{Debug: true, Host: "example.com", Folder: "/tmp", Keys: map[string]string{"k": "v"}}
+	cnf := Config{
+		Debug:  true,
+		Host:   "example.com",
+		Folder: "/tmp",
+		Keys:   map[string]string{"k": "v"},
+	}
 	got := cnf.String()
 	for _, want := range []string{`"host": "example.com"`, `"debug": true`, `"k": "v"`} {
 		if !strings.Contains(got, want) {
@@ -199,7 +204,12 @@ func TestConfigString(t *testing.T) {
 }
 
 func TestConfigLogValue(t *testing.T) {
-	cnf := Config{Debug: true, Host: "example.com", Folder: "/tmp", Keys: map[string]string{"k": "v"}}
+	cnf := Config{
+		Debug:  true,
+		Host:   "example.com",
+		Folder: "/tmp",
+		Keys:   map[string]string{"k": "v"},
+	}
 	v := cnf.LogValue()
 	if v.Kind() != slog.KindGroup {
 		t.Fatalf("LogValue().Kind() = %v, want %v", v.Kind(), slog.KindGroup)
@@ -246,7 +256,11 @@ func TestFindConfigFile(t *testing.T) {
 		t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 		cwd := t.TempDir()
 		t.Chdir(cwd)
-		if err := os.WriteFile(filepath.Join(cwd, defaultFilename), []byte("{}"), 0o600); err != nil {
+		if err := os.WriteFile(
+			filepath.Join(cwd, defaultFilename),
+			[]byte("{}"),
+			0o600,
+		); err != nil {
 			t.Fatal(err)
 		}
 
