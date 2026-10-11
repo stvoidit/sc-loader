@@ -8,6 +8,13 @@ fix:
 build: fix
 	@go build -ldflags "-s -w" .
 
+test:
+	@go test ./...
+
+cover:
+	@go test -race -coverprofile=coverage.out ./client/... ./manager/... ./models/... ./utils/...
+	@go tool cover -func=coverage.out | tail -1
+
 install: build
 	$(info "installpath=${LOCAL_BIN}", progname=${PROG_NAME})
 	@mv --verbose -t ${LOCAL_BIN} ${PROG_NAME}
