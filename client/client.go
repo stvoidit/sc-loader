@@ -332,7 +332,7 @@ func (c *ClientAPI) startPlaylistLoop(
 	defer close(ch)
 	// var currentTry = 0
 	// const maxRetry = 30
-	const timeout = (time.Second * 3) + (time.Millisecond * 431)
+	const timeout = (time.Second * 1) + (time.Millisecond * 431)
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
 	var more url.Values
