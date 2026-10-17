@@ -1,11 +1,11 @@
-package manager_test
+package models_test
 
 import (
 	"log/slog"
 	"regexp"
 	"testing"
 
-	"sc-loader/manager"
+	"sc-loader/models"
 )
 
 func TestParseUsername(t *testing.T) {
@@ -14,13 +14,13 @@ func TestParseUsername(t *testing.T) {
 		name string
 		arg  string
 		host string
-		want manager.Streamer
+		want models.Streamer
 	}{
 		{
 			name: "TestParseUsername.username",
 			arg:  "superUser1",
 			host: host,
-			want: manager.Streamer{
+			want: models.Streamer{
 				Username: "superUser1",
 				SreamURL: "https://examle.com/superUser1",
 			},
@@ -29,7 +29,7 @@ func TestParseUsername(t *testing.T) {
 			name: "TestParseUsername.url",
 			arg:  "https://examle.com/superUser2",
 			host: host,
-			want: manager.Streamer{
+			want: models.Streamer{
 				Username: "superUser2",
 				SreamURL: "https://examle.com/superUser2",
 			},
@@ -38,7 +38,7 @@ func TestParseUsername(t *testing.T) {
 			name: "TestParseUsername.url2",
 			arg:  "https://examle.com/superUser3/video",
 			host: host,
-			want: manager.Streamer{
+			want: models.Streamer{
 				Username: "superUser3",
 				SreamURL: "https://examle.com/superUser3",
 			},
@@ -47,7 +47,7 @@ func TestParseUsername(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := manager.ParseUsername(tt.arg, tt.host)
+			got, gotErr := models.ParseUsername(tt.arg, tt.host)
 			if gotErr != nil {
 				t.Errorf("ParseUsername() failed: %v", gotErr)
 				return
@@ -101,7 +101,7 @@ func TestParseUsernameEdgeCases(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := manager.ParseUsername(tt.arg, host)
+			got, err := models.ParseUsername(tt.arg, host)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("ParseUsername(%q) error = nil, want error", tt.arg)
@@ -125,7 +125,7 @@ func TestParseUsernameEdgeCases(t *testing.T) {
 }
 
 func TestMakeFilename(t *testing.T) {
-	s := manager.Streamer{Username: "alex", SreamURL: "https://examle.com/alex"}
+	s := models.Streamer{Username: "alex", SreamURL: "https://examle.com/alex"}
 	re := regexp.MustCompile(`^alex_\d{8}-\d{6}_tmp\.mp4$`)
 	if got := s.MakeFilename(); !re.MatchString(got) {
 		t.Errorf("MakeFilename() = %q, want alex_YYYYMMDD-HHMMSS_tmp.mp4", got)
@@ -133,7 +133,7 @@ func TestMakeFilename(t *testing.T) {
 }
 
 func TestStreamerLogValue(t *testing.T) {
-	s := manager.Streamer{Username: "alex", SreamURL: "https://examle.com/alex"}
+	s := models.Streamer{Username: "alex", SreamURL: "https://examle.com/alex"}
 	v := s.LogValue()
 	if v.Kind() != slog.KindGroup {
 		t.Fatalf("LogValue().Kind() = %v, want %v", v.Kind(), slog.KindGroup)

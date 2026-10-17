@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"sc-loader/manager"
+	"sc-loader/models"
 	"sc-loader/utils"
 	"time"
 )
@@ -37,7 +38,7 @@ func main() {
 	} else {
 		link = os.Args[1]
 	}
-	streamer, err := manager.ParseUsername(link, config.Host)
+	streamer, err := models.ParseUsername(link, config.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	writedBytes, err := manager.RecordStream(ctx, streamer)
+	writedBytes, err := manager.RecordStream(ctx, &streamer)
 	if err != nil && !utils.IsCancel(err) {
 		slog.Error("RecordStream", slog.String("error", err.Error()))
 	}

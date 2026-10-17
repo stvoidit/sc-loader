@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"sc-loader/client"
+	"sc-loader/models"
 	"sc-loader/utils"
 )
 
@@ -27,7 +28,7 @@ func TestGetFullPathVideoFile(t *testing.T) {
 	folder := t.TempDir()
 	m := Manager{config: &utils.Config{Folder: folder}}
 
-	got := m.GetFullPathVideoFile(Streamer{Username: "alex"})
+	got := m.GetFullPathVideoFile(models.Streamer{Username: "alex"})
 	if filepath.Dir(got) != folder {
 		t.Errorf("GetFullPathVideoFile() dir = %q, want %q", filepath.Dir(got), folder)
 	}

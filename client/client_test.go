@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"sc-loader/models"
 	"sc-loader/utils"
 )
 
@@ -180,12 +181,16 @@ func TestGetRoomID(t *testing.T) {
 		)
 		c, _ := newTestClient(t, mux)
 
-		id, online, err := c.GetRoomID(ctx, "alex")
+		streamer := &models.Streamer{Username: "alex"}
+		id, online, err := c.GetRoomID(ctx, streamer)
 		if err != nil {
 			t.Fatalf("GetRoomID() error = %v", err)
 		}
 		if id != 11111111 || !online {
 			t.Errorf("GetRoomID() = (%d, %v), want (11111111, true)", id, online)
+		}
+		if streamer.RoomID != 11111111 {
+			t.Errorf("streamer.RoomID = %d, want 11111111", streamer.RoomID)
 		}
 		if gotPath != "/api/front/users/user-ids/alex" {
 			t.Errorf("path = %q", gotPath)
@@ -209,7 +214,7 @@ func TestGetRoomID(t *testing.T) {
 		)
 		c, _ := newTestClient(t, mux)
 
-		id, _, err := c.GetRoomID(ctx, "alex")
+		id, _, err := c.GetRoomID(ctx, &models.Streamer{Username: "alex"})
 		if err != nil {
 			t.Fatalf("GetRoomID() error = %v", err)
 		}
@@ -222,7 +227,7 @@ func TestGetRoomID(t *testing.T) {
 		mux := jsonHandler("/api/front/users/user-ids/alex", `{}`)
 		c, _ := newTestClient(t, mux)
 
-		id, online, err := c.GetRoomID(ctx, "alex")
+		id, online, err := c.GetRoomID(ctx, &models.Streamer{Username: "alex"})
 		if err == nil {
 			t.Fatal("GetRoomID() error = nil, want error")
 		}
@@ -235,7 +240,7 @@ func TestGetRoomID(t *testing.T) {
 		mux := jsonHandler("/api/front/users/user-ids/alex", `{"id":"not-a-number"}`)
 		c, _ := newTestClient(t, mux)
 
-		if _, _, err := c.GetRoomID(ctx, "alex"); err == nil {
+		if _, _, err := c.GetRoomID(ctx, &models.Streamer{Username: "alex"}); err == nil {
 			t.Error("GetRoomID() error = nil, want unmarshal error")
 		}
 	})
@@ -244,7 +249,7 @@ func TestGetRoomID(t *testing.T) {
 		mux := jsonHandler("/api/front/users/user-ids/alex", `<html>not found</html>`)
 		c, _ := newTestClient(t, mux)
 
-		if _, _, err := c.GetRoomID(ctx, "alex"); err == nil {
+		if _, _, err := c.GetRoomID(ctx, &models.Streamer{Username: "alex"}); err == nil {
 			t.Error("GetRoomID() error = nil, want unmarshal error")
 		}
 	})
@@ -260,7 +265,7 @@ func TestGetRoomID(t *testing.T) {
 		)
 		c, _ := newTestClient(t, mux)
 
-		id, online, err := c.GetRoomID(ctx, "alex")
+		id, online, err := c.GetRoomID(ctx, &models.Streamer{Username: "alex"})
 		if err == nil {
 			t.Fatal("GetRoomID() error = nil для http 500")
 		}
@@ -275,7 +280,7 @@ func TestGetRoomID(t *testing.T) {
 
 		canceled, cancel := context.WithCancel(ctx)
 		cancel()
-		_, _, err := c.GetRoomID(canceled, "alex")
+		_, _, err := c.GetRoomID(canceled, &models.Streamer{Username: "alex"})
 		if err == nil || !utils.IsCancel(err) {
 			t.Errorf("GetRoomID() error = %v, want canceled", err)
 		}
@@ -300,12 +305,12 @@ func TestGetRoomStatus(t *testing.T) {
 		)
 		c, _ := newTestClient(t, mux)
 
-		status, online, err := c.GetRoomStatus(ctx, "alex", testRoomID)
+		status, online, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID})
 		if err != nil {
 			t.Fatalf("GetRoomStatus() error = %v", err)
 		}
-		if status != "public" || !online {
-			t.Errorf("GetRoomStatus() = (%q, %v), want (public, true)", status, online)
+		if status != models.StatusPublic || !online {
+			t.Errorf("GetRoomStatus() = (%s, %v), want (public, true)", status, online)
 		}
 		if gotPath != "/api/front/v2/broadcasts/123" {
 			t.Errorf("path = %q", gotPath)
@@ -319,12 +324,12 @@ func TestGetRoomStatus(t *testing.T) {
 		)
 		c, _ := newTestClient(t, mux)
 
-		status, online, err := c.GetRoomStatus(ctx, "alex", testRoomID)
+		status, online, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID})
 		if err != nil {
 			t.Fatalf("GetRoomStatus() error = %v", err)
 		}
 		if status != "offline" || online {
-			t.Errorf("GetRoomStatus() = (%q, %v), want (offline, false)", status, online)
+			t.Errorf("GetRoomStatus() = (%s, %v), want (offline, false)", status, online)
 		}
 	})
 
@@ -332,13 +337,13 @@ func TestGetRoomStatus(t *testing.T) {
 		mux := jsonHandler("/api/front/v2/broadcasts/123", `{"item":`)
 		c, _ := newTestClient(t, mux)
 
-		status, online, err := c.GetRoomStatus(ctx, "alex", testRoomID)
+		status, online, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID})
 		if err == nil {
 			t.Fatal("GetRoomStatus() error = nil, want error")
 		}
 		// при ошибке разбора online остаётся true, чтобы запись не прерывалась
 		if status != "" || !online {
-			t.Errorf("GetRoomStatus() = (%q, %v), want (\"\", true)", status, online)
+			t.Errorf("GetRoomStatus() = (%s, %v), want (\"\", true)", status, online)
 		}
 	})
 
@@ -354,12 +359,12 @@ func TestGetRoomStatus(t *testing.T) {
 		c, _ := newTestClient(t, mux)
 
 		// код ответа не проверяется, поэтому тело разбирается как Broadcast
-		status, online, err := c.GetRoomStatus(ctx, "alex", testRoomID)
+		status, online, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID})
 		if err != nil {
 			t.Fatalf("GetRoomStatus() error = %v", err)
 		}
 		if status != "" || online {
-			t.Errorf("GetRoomStatus() = (%q, %v), want (\"\", false)", status, online)
+			t.Errorf("GetRoomStatus() = (%s, %v), want (\"\", false)", status, online)
 		}
 	})
 
@@ -374,7 +379,7 @@ func TestGetRoomStatus(t *testing.T) {
 		)
 		c, _ := newTestClient(t, mux)
 
-		if _, _, err := c.GetRoomStatus(ctx, "alex", testRoomID); err == nil {
+		if _, _, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID}); err == nil {
 			t.Error("GetRoomStatus() error = nil, want unmarshal error")
 		}
 	})
@@ -563,7 +568,7 @@ func TestGetPlaylistVariants(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		c := newSrv(t, http.StatusOK, masterPlaylistBody(variant, testKey))
 
-		playlist, psch, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", testRoomID)
+		playlist, psch, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", &models.Streamer{RoomID: testRoomID})
 		if err != nil {
 			t.Fatalf("GetPlaylistVariants() error = %v", err)
 		}
@@ -587,7 +592,7 @@ func TestGetPlaylistVariants(t *testing.T) {
 	t.Run("http 404", func(t *testing.T) {
 		c := newSrv(t, http.StatusNotFound, masterPlaylistBody(variant, testKey))
 
-		_, _, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", testRoomID)
+		_, _, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", &models.Streamer{RoomID: testRoomID})
 		if err == nil {
 			t.Fatal("GetPlaylistVariants() error = nil для http 404")
 		}
@@ -602,7 +607,7 @@ func TestGetPlaylistVariants(t *testing.T) {
 		if _, _, err := c.GetPlaylistVariants(
 			ctx,
 			"doppiocdn.com",
-			testRoomID,
+			&models.Streamer{RoomID: testRoomID},
 		); !errors.Is(
 			err,
 			ErrPKeyNotFound,
@@ -617,7 +622,7 @@ func TestGetPlaylistVariants(t *testing.T) {
 		if _, _, err := c.GetPlaylistVariants(
 			ctx,
 			"doppiocdn.com",
-			testRoomID,
+			&models.Streamer{RoomID: testRoomID},
 		); !errors.Is(
 			err,
 			utils.ErrKeyNotFound,
@@ -916,7 +921,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
+		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
 
 		want := mediaPart(cnf.Host, testDecrypted)
 		deadline := time.After(15 * time.Second)
@@ -971,7 +976,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
+		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
 
 		select {
 		case link, ok := <-ch:
@@ -1006,7 +1011,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
+		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
 		waitClosed(t, ch)
 	})
 
@@ -1026,7 +1031,7 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, testRoomID, "alex", plist, testPSCH())
+		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
 		waitClosed(t, ch)
 	})
 }
@@ -1052,13 +1057,13 @@ func TestInvalidHost(t *testing.T) {
 	ctx := context.Background()
 	c := NewClient(&utils.Config{Host: "invalid host"})
 
-	if _, _, err := c.GetRoomID(ctx, "alex"); err == nil {
+	if _, _, err := c.GetRoomID(ctx, &models.Streamer{Username: "alex"}); err == nil {
 		t.Error("GetRoomID() error = nil, want error")
 	}
-	if _, _, err := c.GetRoomStatus(ctx, "alex", testRoomID); err == nil {
+	if _, _, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID}); err == nil {
 		t.Error("GetRoomStatus() error = nil, want error")
 	}
-	if _, _, err := c.GetPlaylistVariants(ctx, "invalid cdn", testRoomID); err == nil {
+	if _, _, err := c.GetPlaylistVariants(ctx, "invalid cdn", &models.Streamer{RoomID: testRoomID}); err == nil {
 		t.Error("GetPlaylistVariants() error = nil, want error")
 	}
 	if _, err := c.InitClientConfig(ctx); err == nil {

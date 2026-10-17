@@ -33,6 +33,19 @@ func (rr RoomResponse) GetStatus() string {
 	return rr.User.User.Status
 }
 
+type BroadcastStatus string
+
+func (bs BroadcastStatus) String() string {
+	return string(bs)
+}
+
+const (
+	StatusPublic    = "public"
+	StatusPrivate   = "private"
+	StatusGroupShow = "groupShow"
+	StatusOff       = "off"
+)
+
 type Broadcast struct {
 	Item struct {
 		AppType         string `json:"appType"`
@@ -69,19 +82,19 @@ type Broadcast struct {
 			} `json:"videoQuality"`
 			Width int `json:"width"`
 		} `json:"settings"`
-		SnapshotTimestamp int       `json:"snapshotTimestamp"`
-		Status            string    `json:"status"`
-		StatusChangedAt   time.Time `json:"statusChangedAt"`
-		StreamName        string    `json:"streamName"`
-		Username          string    `json:"username"`
-		WebRTCAppKey      string    `json:"webRTCAppKey"`
+		SnapshotTimestamp int             `json:"snapshotTimestamp"`
+		Status            BroadcastStatus `json:"status"`
+		StatusChangedAt   time.Time       `json:"statusChangedAt"`
+		StreamName        string          `json:"streamName"`
+		Username          string          `json:"username"`
+		WebRTCAppKey      string          `json:"webRTCAppKey"`
 	} `json:"item"`
 }
 
 func (b Broadcast) IsOnline() bool {
-	return b.Item.IsLive
+	return b.Item.Status == StatusPublic
 }
 
-func (b Broadcast) GetStatus() string {
+func (b Broadcast) GetStatus() BroadcastStatus {
 	return b.Item.Status
 }

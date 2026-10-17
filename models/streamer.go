@@ -1,4 +1,4 @@
-package manager
+package models
 
 import (
 	"log/slog"
@@ -11,6 +11,7 @@ import (
 type Streamer struct {
 	Username string
 	SreamURL string
+	RoomID   int
 }
 
 func (s Streamer) LogValue() slog.Value {

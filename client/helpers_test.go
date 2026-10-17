@@ -2,8 +2,8 @@ package client
 
 import (
 	"bytes"
-	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"errors"
 	"io"
 	"net/http"
@@ -28,10 +28,7 @@ func gzipBytes(t *testing.T, s string) []byte {
 func deflateBytes(t *testing.T, s string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
-	w, err := flate.NewWriter(&buf, flate.DefaultCompression)
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := zlib.NewWriter(&buf)
 	if _, err := w.Write([]byte(s)); err != nil {
 		t.Fatal(err)
 	}

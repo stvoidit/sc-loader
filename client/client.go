@@ -176,9 +176,9 @@ func (c *ClientAPI) InitClientConfig(ctx context.Context) (id models.InitialDyna
 
 func (c *ClientAPI) GetRoomID(
 	ctx context.Context,
-	username string,
+	streamer *models.Streamer,
 ) (roomID int, online bool, err error) {
-	var userRoomUrl = makeUserIDURL(c.cnf.Host, username)
+	var userRoomUrl = makeUserIDURL(c.cnf.Host, streamer.Username)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
 	if err != nil {
@@ -201,16 +201,16 @@ func (c *ClientAPI) GetRoomID(
 	if !ok {
 		return -1, false, errors.New("room id not found")
 	}
+	streamer.RoomID = id
 	// return rr.GetRoomId(), rr.IsOnline(), err
 	return id, true, err
 }
 
 func (c *ClientAPI) GetRoomStatus(
 	ctx context.Context,
-	username string,
-	roomID int,
-) (status string, online bool, err error) {
-	var userRoomUrl = makeBroadcastURL(c.cnf.Host, roomID)
+	streamer *models.Streamer,
+) (status models.BroadcastStatus, online bool, err error) {
+	var userRoomUrl = makeBroadcastURL(c.cnf.Host, streamer.RoomID)
 	slog.Debug("GetRoomID", slog.String("userRoomUrl", userRoomUrl))
 	req, err := c.makeRequest(ctx, userRoomUrl)
 	if err != nil {
@@ -235,9 +235,9 @@ var ErrPKeyNotFound = errors.New("pkey not found")
 func (c *ClientAPI) GetPlaylistVariants(
 	ctx context.Context,
 	cdnDomain string,
-	roomId int,
+	streamer *models.Streamer,
 ) (playlist string, psch utils.PSCH, err error) {
-	var playlistUrl = makeMasterPlaylistURL(cdnDomain, roomId)
+	var playlistUrl = makeMasterPlaylistURL(cdnDomain, streamer.RoomID)
 	slog.Debug("GetPlaylistVariants", slog.String("playlistUrl", playlistUrl))
 	req, err := c.makeRequest(ctx, playlistUrl)
 	if err != nil {
@@ -332,8 +332,7 @@ func (c *ClientAPI) DownloadBuf(ctx context.Context, link string) ([]byte, error
 
 func (c *ClientAPI) startPlaylistLoop(
 	ctx context.Context,
-	roomID int,
-	username string,
+	streamer *models.Streamer,
 	ch chan<- string,
 	plist string,
 	pkey utils.PSCH,
@@ -371,7 +370,7 @@ loop:
 					ch <- vids[i]
 				}
 			} else {
-				status, online, err := c.GetRoomStatus(ctx, username, roomID)
+				status, online, err := c.GetRoomStatus(ctx, streamer)
 				if err != nil {
 					if !utils.IsCancel(err) {
 						slog.Error("GetPlaylistVideo", "error", err.Error())
@@ -379,10 +378,10 @@ loop:
 					break loop
 				}
 				if !online {
-					slog.Warn("GetRoomStatus", slog.String("status", status), slog.Bool("online", online))
+					slog.Warn("GetRoomStatus", slog.String("status", status.String()), slog.Bool("online", online))
 					break loop
 				}
-				slog.Info("GetRoomStatus", slog.String("status", status), slog.Bool("online", online))
+				slog.Info("GetRoomStatus", slog.String("status", status.String()), slog.Bool("online", online))
 			}
 		}
 	}
@@ -390,11 +389,11 @@ loop:
 
 func (c *ClientAPI) StartPlaylistLoop(
 	ctx context.Context,
-	roomID int,
-	username, plist string,
+	streamer *models.Streamer,
+	plist string,
 	pkey utils.PSCH,
 ) <-chan string {
 	var ch = make(chan string, 100)
-	go c.startPlaylistLoop(ctx, roomID, username, ch, plist, pkey)
+	go c.startPlaylistLoop(ctx, streamer, ch, plist, pkey)
 	return ch
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sc-loader/client"
+	"sc-loader/models"
 	"sc-loader/utils"
 )
 
@@ -40,16 +41,16 @@ type Manager struct {
 	bestCDN string
 }
 
-func (m Manager) GetFullPathVideoFile(streamer Streamer) string {
+func (m Manager) GetFullPathVideoFile(streamer models.Streamer) string {
 	filename := streamer.MakeFilename()
 	return m.config.MakeFilePath(filename)
 }
 
 func (m *Manager) RecordStream(
 	ctx context.Context,
-	streamer Streamer,
+	streamer *models.Streamer,
 ) (writedBytes int, err error) {
-	roomID, online, err := m.client.GetRoomID(ctx, streamer.Username)
+	roomID, online, err := m.client.GetRoomID(ctx, streamer)
 	if err != nil {
 		slog.Error("main", "streamer", streamer, slog.String("error", err.Error()))
 		return writedBytes, err
@@ -59,15 +60,15 @@ func (m *Manager) RecordStream(
 		return writedBytes, err
 	}
 	slog.Debug("main", slog.Int("roomID", roomID), slog.String("cdn", m.bestCDN))
-	plist, pkey, err := m.client.GetPlaylistVariants(ctx, m.bestCDN, roomID)
+	plist, pkey, err := m.client.GetPlaylistVariants(ctx, m.bestCDN, streamer)
 	if err != nil {
 		slog.Error("main.GetPlaylistVariants", slog.String("error", err.Error()))
 		return writedBytes, err
 	}
 	slog.Debug("main", "plist", plist)
 	slog.Info("RecordStream", slog.String("cdn", m.bestCDN))
-	outputFilename := m.GetFullPathVideoFile(streamer)
-	ch := m.client.StartPlaylistLoop(ctx, roomID, streamer.Username, plist, pkey)
+	outputFilename := m.GetFullPathVideoFile(*streamer)
+	ch := m.client.StartPlaylistLoop(ctx, streamer, plist, pkey)
 	return m.StartPipeFFmpeg(ctx, outputFilename, ch)
 }
 
