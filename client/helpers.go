@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"net/url"
@@ -12,6 +13,11 @@ import (
 )
 
 var ErrUnknownCompressionMethod = errors.New("unknown compression method")
+
+type readCloserWrapper struct {
+	io.ReadCloser
+	original io.ReadCloser
+}
 
 // unzipResponse - распаковка сжатого ответа
 func unzipResponse(response *http.Response) (err error) {
@@ -26,13 +32,13 @@ func unzipResponse(response *http.Response) (err error) {
 		if err != nil {
 			return err
 		}
-		response.Body = gz
+		response.Body = &readCloserWrapper{ReadCloser: gz, original: response.Body}
 		response.Uncompressed = true
 		response.Header.Del("Content-Encoding")
 		return nil
 	case "deflate":
 		fr := flate.NewReader(response.Body)
-		response.Body = fr
+		response.Body = &readCloserWrapper{ReadCloser: fr, original: response.Body}
 		response.Uncompressed = true
 		response.Header.Del("Content-Encoding")
 		return nil
