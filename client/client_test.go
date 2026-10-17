@@ -568,7 +568,11 @@ func TestGetPlaylistVariants(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		c := newSrv(t, http.StatusOK, masterPlaylistBody(variant, testKey))
 
-		playlist, psch, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", &models.Streamer{RoomID: testRoomID})
+		playlist, psch, err := c.GetPlaylistVariants(
+			ctx,
+			"doppiocdn.com",
+			&models.Streamer{RoomID: testRoomID},
+		)
 		if err != nil {
 			t.Fatalf("GetPlaylistVariants() error = %v", err)
 		}
@@ -592,7 +596,11 @@ func TestGetPlaylistVariants(t *testing.T) {
 	t.Run("http 404", func(t *testing.T) {
 		c := newSrv(t, http.StatusNotFound, masterPlaylistBody(variant, testKey))
 
-		_, _, err := c.GetPlaylistVariants(ctx, "doppiocdn.com", &models.Streamer{RoomID: testRoomID})
+		_, _, err := c.GetPlaylistVariants(
+			ctx,
+			"doppiocdn.com",
+			&models.Streamer{RoomID: testRoomID},
+		)
 		if err == nil {
 			t.Fatal("GetPlaylistVariants() error = nil для http 404")
 		}
@@ -921,7 +929,12 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
+		ch := c.StartPlaylistLoop(
+			ctx,
+			&models.Streamer{RoomID: testRoomID, Username: "alex"},
+			plist,
+			testPSCH(),
+		)
 
 		want := mediaPart(cnf.Host, testDecrypted)
 		deadline := time.After(15 * time.Second)
@@ -976,7 +989,12 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
+		ch := c.StartPlaylistLoop(
+			ctx,
+			&models.Streamer{RoomID: testRoomID, Username: "alex"},
+			plist,
+			testPSCH(),
+		)
 
 		select {
 		case link, ok := <-ch:
@@ -1011,7 +1029,12 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
+		ch := c.StartPlaylistLoop(
+			ctx,
+			&models.Streamer{RoomID: testRoomID, Username: "alex"},
+			plist,
+			testPSCH(),
+		)
 		waitClosed(t, ch)
 	})
 
@@ -1031,7 +1054,12 @@ func TestStartPlaylistLoop(t *testing.T) {
 			testRoomID,
 			testKey,
 		)
-		ch := c.StartPlaylistLoop(ctx, &models.Streamer{RoomID: testRoomID, Username: "alex"}, plist, testPSCH())
+		ch := c.StartPlaylistLoop(
+			ctx,
+			&models.Streamer{RoomID: testRoomID, Username: "alex"},
+			plist,
+			testPSCH(),
+		)
 		waitClosed(t, ch)
 	})
 }
@@ -1063,7 +1091,11 @@ func TestInvalidHost(t *testing.T) {
 	if _, _, err := c.GetRoomStatus(ctx, &models.Streamer{RoomID: testRoomID}); err == nil {
 		t.Error("GetRoomStatus() error = nil, want error")
 	}
-	if _, _, err := c.GetPlaylistVariants(ctx, "invalid cdn", &models.Streamer{RoomID: testRoomID}); err == nil {
+	if _, _, err := c.GetPlaylistVariants(
+		ctx,
+		"invalid cdn",
+		&models.Streamer{RoomID: testRoomID},
+	); err == nil {
 		t.Error("GetPlaylistVariants() error = nil, want error")
 	}
 	if _, err := c.InitClientConfig(ctx); err == nil {
