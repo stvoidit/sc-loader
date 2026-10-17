@@ -1,8 +1,8 @@
 package client
 
 import (
-	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"errors"
 	"fmt"
 	"io"
@@ -37,8 +37,11 @@ func unzipResponse(response *http.Response) (err error) {
 		response.Header.Del("Content-Encoding")
 		return nil
 	case "deflate":
-		fr := flate.NewReader(response.Body)
-		response.Body = &readCloserWrapper{ReadCloser: fr, original: response.Body}
+		zr, err := zlib.NewReader(response.Body)
+		if err != nil {
+			return err
+		}
+		response.Body = &readCloserWrapper{ReadCloser: zr, original: response.Body}
 		response.Uncompressed = true
 		response.Header.Del("Content-Encoding")
 		return nil
