@@ -1,125 +1,33 @@
 package models
 
 import (
-	"errors"
-	"math/rand/v2"
 	"regexp"
-	"time"
 )
 
+// domainFilterRegex отсеивает служебные CDN-домены с цифрами в имени.
 var domainFilterRegex = regexp.MustCompile(`\d+`)
 
+// InitialDynamicResponse — ответ /api/front/v3/config/initial-dynamic.
 type InitialDynamicResponse struct {
 	InitialDynamic InitialDynamic `json:"initialDynamic"`
 }
 
+// InitialDynamic — конфигурация клиента, выдаваемая сайтом при загрузке.
 type InitialDynamic struct {
-	CSRFToken           string    `json:"csrfToken"`
-	CSRFTimestamp       time.Time `json:"csrfTimestamp"`
-	CSRFNotifyTimestamp time.Time `json:"csrfNotifyTimestamp"`
-	JwtToken            *string   `json:"jwtToken"`
-	GuestID             int64     `json:"guestId"`
-	SessionHash         string    `json:"sessionHash"`
-	UserHash            string    `json:"userHash"`
-	IPHash              int64     `json:"ipHash"`
-	CometAuth           string    `json:"cometAuth"`
-	TabID               string    `json:"tabId"`
-	WebsocketURL        string    `json:"websocketUrl"`
-	Websocket           Websocket `json:"websocket"`
-	Players             Players   `json:"players"`
-	// WebsocketApps        Websocket `json:"websocketApps"`
-	// CAPTCHA              CAPTCHA   `json:"captcha"`
-	// Turnstile            Turnstile `json:"turnstile"`
-	// Flags                []string  `json:"flags"`
-	// User                 any       `json:"user"`
-	// IsPublic             bool      `json:"isPublic"`
-	// PreferredTag         string    `json:"preferredTag"`
-	// DetectedPreferredTag string    `json:"detectedPreferredTag"`
-
+	Players Players `json:"players"`
 }
 
-type CAPTCHA struct {
-	IsEnabled  bool      `json:"isEnabled"`
-	IsRequired bool      `json:"isRequired"`
-	Type       string    `json:"type"`
-	Config     Turnstile `json:"config"`
-}
-
-type Turnstile struct {
-	SiteKey string `json:"siteKey"`
-}
-
+// Players — настройки плееров и список CDN.
 type Players struct {
-	// IsVP8BroadcastAvailable                  bool                               `json:"isVP8BroadcastAvailable"`
-	// IsNewPresetsEnabled                      bool                               `json:"isNewPresetsEnabled"`
-	// AutoResolutionPlayers                    []string                           `json:"autoResolutionPlayers"`
-	// WebRTCMeasurementLockTimeout             int64                              `json:"webRTCMeasurementLockTimeout"`
-	// WebrtcEdgeWSURL                          string                             `json:"webrtcEdgeWSUrl"`
-	// WebrtcOriginWSURL                        string                             `json:"webrtcOriginWSUrl"`
-	// WebrtcPixelateURL                        string                             `json:"webrtcPixelateUrl"`
-	PlayoutDelayHint                         float64                            `json:"playoutDelayHint"`
-	HLSLowLatencyPlayerTypeDisabledPlatforms []string                           `json:"hlsLowLatencyPlayerTypeDisabledPlatforms"`
-	HLSLowLatencyDisabledBrowsersMap         HLSLowLatencyDisabledBrowsersMap   `json:"hlsLowLatencyDisabledBrowsersMap"`
-	WebRTCMeasurementFactors                 WebRTCMeasurementFactors           `json:"webRTCMeasurementFactors"`
-	WebRTCMeasurementConstants               WebRTCMeasurementConstants         `json:"webRTCMeasurementConstants"`
-	CDNConfig                                []CDNConfig                        `json:"cdnConfig"`
-	LlCountriesBlacklist                     []string                           `json:"llCountriesBlacklist"`
-	BroadcastResolutionList                  map[string]BroadcastResolutionList `json:"broadcastResolutionList"`
-	IsHLSLLEnabled                           bool                               `json:"isHLSLLEnabled"`
+	CDNConfig []CDNConfig `json:"cdnConfig"`
 }
 
-func (p Players) GetCDNConfigs() []CDNConfig {
-	return p.CDNConfig
-}
-
-type BroadcastResolutionList struct {
-	Bitrate      int64         `json:"bitrate"`
-	Width        int64         `json:"width"`
-	Height       int64         `json:"height"`
-	IsEnabled    bool          `json:"isEnabled"`
-	BitrateByFPS *BitrateByFPS `json:"bitrateByFPS,omitempty"`
-}
-
-type BitrateByFPS struct {
-	The50   int64 `json:"50"`
-	Default int64 `json:"default"`
-}
-
+// CDNConfig — описание одного CDN-домена.
 type CDNConfig struct {
-	Domain   string `json:"domain"`
-	Features struct {
-		Ll bool `json:"ll"`
-	} `json:"features"`
+	Domain string `json:"domain"`
 }
 
-type HLSLowLatencyDisabledBrowsersMap struct {
-	Firefox string `json:"firefox"`
-}
-
-type WebRTCMeasurementConstants struct {
-	ABRAverageUpFactor   float64 `json:"abrAverageUpFactor"`
-	ABRAverageDownFactor float64 `json:"abrAverageDownFactor"`
-	ABRVectorUpFactor    float64 `json:"abrVectorUpFactor"`
-	ABRVectorDownFactor  int64   `json:"abrVectorDownFactor"`
-}
-
-type WebRTCMeasurementFactors struct {
-	Rtt         Bitrate `json:"rtt"`
-	PacketsLost Bitrate `json:"packetsLost"`
-	Bitrate     Bitrate `json:"bitrate"`
-}
-
-type Bitrate struct {
-	MeasurementFault float64 `json:"measurementFault"`
-	Multiplier       float64 `json:"multiplier"`
-	Ratio            float64 `json:"ratio"`
-}
-
-type Websocket struct {
-	URL   string `json:"url"`
-	Token string `json:"token"`
-}
-
+// GetDomainsCDN возвращает CDN-домены без цифр в имени.
 func (id InitialDynamic) GetDomainsCDN() []string {
 	var cleaned = make([]string, 0, len(id.Players.CDNConfig))
 	for i := range id.Players.CDNConfig {
@@ -128,12 +36,4 @@ func (id InitialDynamic) GetDomainsCDN() []string {
 		}
 	}
 	return cleaned
-}
-
-func (id InitialDynamic) GetDomainCDN() (domain string, err error) {
-	var cleaned = id.GetDomainsCDN()
-	if len(cleaned) == 0 {
-		return "", errors.New("no CDN domains available")
-	}
-	return cleaned[rand.IntN(len(cleaned))], nil
 }

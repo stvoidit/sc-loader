@@ -178,23 +178,6 @@ func TestMakeURLs(t *testing.T) {
 	}
 }
 
-func TestMakeRoomURL(t *testing.T) {
-	got := makeRoomURL("example.com", "alex")
-	if !strings.HasPrefix(got, "https://example.com/api/front/v2/models/username/alex/cam?") {
-		t.Fatalf("makeRoomURL() = %q", got)
-	}
-	q, err := url.ParseQuery(strings.SplitN(got, "?", 2)[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if q.Get("triggerRequest") != "loadCam" {
-		t.Errorf("triggerRequest = %q, want %q", q.Get("triggerRequest"), "loadCam")
-	}
-	if len(q.Get("uniq")) != 16 {
-		t.Errorf("uniq = %q, want 16 символов", q.Get("uniq"))
-	}
-}
-
 func TestMakeMasterPlaylist(t *testing.T) {
 	got, err := makeMasterPlaylist(
 		"https://edge-hls.example.com/hls/123/master/123_auto.m3u8",

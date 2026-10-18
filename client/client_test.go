@@ -13,7 +13,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -112,8 +111,8 @@ func TestNewClient(t *testing.T) {
 	if c._c == nil || c._c.Timeout != 10*time.Second {
 		t.Errorf("http.Client = %+v, want timeout 10s", c._c)
 	}
-	if !c.IsNewURL("x") {
-		t.Error("IsNewURL() = false для нового множества")
+	if c.writedParts.Has("x") {
+		t.Error("writedParts.Has() = true для нового множества")
 	}
 }
 
@@ -428,8 +427,8 @@ func TestInitClientConfig(t *testing.T) {
 		if err != nil {
 			t.Fatalf("InitClientConfig() error = %v", err)
 		}
-		if id.CSRFToken != "csrf" || id.GuestID != 42 {
-			t.Errorf("InitialDynamic = %+v", id)
+		if len(id.Players.CDNConfig) != 2 {
+			t.Errorf("InitialDynamic = %+v, want 2 CDN-домена", id)
 		}
 		if got := c.defaultHeaders.Get("front-version"); got != "2026.10.11" {
 			t.Errorf("front-version = %q, want 2026.10.11", got)
@@ -439,28 +438,6 @@ func TestInitClientConfig(t *testing.T) {
 		}
 		if got := id.GetDomainsCDN(); len(got) != 1 || got[0] != "doppiocdn.com" {
 			t.Errorf("GetDomainsCDN() = %v, want [doppiocdn.com]", got)
-		}
-	})
-
-	t.Run("Init returns cdn domain", func(t *testing.T) {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, `release_version: 1.0`) //nolint:errcheck
-		})
-		mux.HandleFunc(
-			"/api/front/v3/config/initial-dynamic",
-			func(w http.ResponseWriter, r *http.Request) {
-				io.WriteString(w, initialDynamicJSON) //nolint:errcheck
-			},
-		)
-		c, _ := newTestClient(t, mux)
-
-		domain, err := c.Init(ctx)
-		if err != nil {
-			t.Fatalf("Init() error = %v", err)
-		}
-		if domain != "doppiocdn.com" {
-			t.Errorf("Init() = %q, want doppiocdn.com", domain)
 		}
 	})
 
@@ -765,14 +742,14 @@ func TestGetPlaylistVideo(t *testing.T) {
 	})
 }
 
-func TestIsNewURLAndSetCheckURL(t *testing.T) {
+func TestSetCheckURL(t *testing.T) {
 	c := NewClient(&utils.Config{Host: "example.com"})
-	if !c.IsNewURL("a") {
-		t.Error("IsNewURL(a) = false, want true")
+	if c.writedParts.Has("a") {
+		t.Error("writedParts.Has(a) = true для нового клиента")
 	}
 	c.SetCheckURL("a")
-	if c.IsNewURL("a") {
-		t.Error("IsNewURL(a) = true после SetCheckURL")
+	if !c.writedParts.Has("a") {
+		t.Error("writedParts.Has(a) = false после SetCheckURL")
 	}
 	if got := c.filterParts([]string{"a", "b"}); len(got) != 1 || got[0] != "b" {
 		t.Errorf("filterParts() = %v, want [b]", got)
@@ -805,7 +782,7 @@ func TestDownloadBuf(t *testing.T) {
 		if string(buf) != "PART-1-DATA" {
 			t.Errorf("DownloadBuf() = %q", buf)
 		}
-		if c.IsNewURL(link) {
+		if !c.writedParts.Has(link) {
 			t.Error("ссылка не помечена как загруженная")
 		}
 	})
@@ -828,7 +805,7 @@ func TestDownloadBuf(t *testing.T) {
 			t.Fatal("DownloadBuf() error = nil, want error")
 		}
 		// SetCheckURL вызывается через defer даже при ошибке
-		if c.IsNewURL(link) {
+		if !c.writedParts.Has(link) {
 			t.Error("ссылка не помечена после ошибки")
 		}
 	})
@@ -855,53 +832,6 @@ func TestDownloadBuf(t *testing.T) {
 			t.Error("DownloadBuf() error = nil для оборванного ответа")
 		}
 	})
-}
-
-func TestDownloadWrite(t *testing.T) {
-	ctx := context.Background()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "0123456789") //nolint:errcheck
-	}))
-	t.Cleanup(srv.Close)
-
-	c := NewClient(&utils.Config{Host: "example.com"})
-	path := filepath.Join(t.TempDir(), "out.mp4")
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer utils.DeferCloseReader(f)
-
-	link := srv.URL + "/part"
-	n, err := c.DownloadWrite(ctx, f, link)
-	if err != nil {
-		t.Fatalf("DownloadWrite() error = %v", err)
-	}
-	if n != 10 {
-		t.Errorf("DownloadWrite() n = %d, want 10", n)
-	}
-
-	// повторная запись той же ссылки пропускается
-	n, err = c.DownloadWrite(ctx, f, link)
-	if err != nil {
-		t.Fatalf("DownloadWrite() error = %v", err)
-	}
-	if n != 0 {
-		t.Errorf("DownloadWrite() n = %d, want 0", n)
-	}
-
-	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != "0123456789" {
-		t.Errorf("файл = %q, want %q", got, "0123456789")
-	}
-
-	// ошибка загрузки пробрасывается наружу
-	if _, err := c.DownloadWrite(ctx, f, "https://x/%zz"); err == nil {
-		t.Error("DownloadWrite() error = nil, want error")
-	}
 }
 
 func TestStartPlaylistLoop(t *testing.T) {
@@ -1101,24 +1031,6 @@ func TestInvalidHost(t *testing.T) {
 	if _, err := c.InitClientConfig(ctx); err == nil {
 		t.Error("InitClientConfig() error = nil, want error")
 	}
-	if _, err := c.Init(ctx); err == nil {
-		t.Error("Init() error = nil, want error")
-	}
-}
-
-func TestInitError(t *testing.T) {
-	c := NewClient(&utils.Config{Host: "example.com"})
-	c._c.Transport = roundTripperFunc(func(*http.Request) (*http.Response, error) {
-		return nil, errors.New("no route to host")
-	})
-
-	domain, err := c.Init(context.Background())
-	if err == nil {
-		t.Fatal("Init() error = nil, want error")
-	}
-	if domain != "" {
-		t.Errorf("Init() = %q, want empty", domain)
-	}
 }
 
 func TestGetFrontendVersionBrokenEncoding(t *testing.T) {
@@ -1136,26 +1048,5 @@ func TestGetFrontendVersionBrokenEncoding(t *testing.T) {
 		ErrUnknownCompressionMethod,
 	) {
 		t.Errorf("InitClientConfig() error = %v, want %v", err, ErrUnknownCompressionMethod)
-	}
-}
-
-func TestDownloadWriteFileError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "data") //nolint:errcheck
-	}))
-	t.Cleanup(srv.Close)
-
-	c := NewClient(&utils.Config{Host: "example.com"})
-	path := filepath.Join(t.TempDir(), "closed.mp4")
-	f, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := c.DownloadWrite(context.Background(), f, srv.URL+"/part"); err == nil {
-		t.Error("DownloadWrite() error = nil для закрытого файла")
 	}
 }

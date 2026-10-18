@@ -9,7 +9,6 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
-	"sc-loader/utils"
 )
 
 var ErrUnknownCompressionMethod = errors.New("unknown compression method")
@@ -53,26 +52,16 @@ func unzipResponse(response *http.Response) (err error) {
 const (
 	scheme            = "https"
 	endpointConfig    = `/api/front/v3/config/initial-dynamic`
-	endpointRoom      = `/api/front/v2/models/username/%s/cam`
 	endpointUserID    = `/api/front/users/user-ids/%s`
 	endpointPlayList  = `/hls/%d/master/%d_auto.m3u8`
 	endpointBroadcast = `/api/front/v2/broadcasts/%d`
 )
 
-const (
-	playlistTypeStandard   = "standard"
-	playlistTypeLowLatency = "lowLatency"
-)
+const playlistTypeLowLatency = "lowLatency"
 
-var (
-	lowLatencyQuery = (url.Values{
-		"playlistType": []string{playlistTypeLowLatency},
-	}).Encode()
-	roomQuery = (url.Values{
-		"triggerRequest": []string{"loadCam"},
-		"uniq":           []string{utils.MakeUniq()},
-	}).Encode()
-)
+var lowLatencyQuery = (url.Values{
+	"playlistType": []string{playlistTypeLowLatency},
+}).Encode()
 
 func makeConfigURL(host string) string {
 	link := url.URL{
@@ -81,17 +70,6 @@ func makeConfigURL(host string) string {
 		Path:     endpointConfig,
 		RawQuery: "requestPath=/",
 	}
-	return link.String()
-}
-
-func makeRoomURL(host, username string) string {
-	// uniq := utils.MakeUniq()
-	link := (url.URL{
-		Scheme:   scheme,
-		Host:     host,
-		Path:     fmt.Sprintf(endpointRoom, username),
-		RawQuery: roomQuery,
-	})
 	return link.String()
 }
 

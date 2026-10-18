@@ -7,18 +7,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 )
-
-func FileStat(f *os.File) (string, error) {
-	fi, err := f.Stat()
-	if err != nil {
-		return "", err
-	}
-	size := fi.Size()
-	return FormatFileSize(size), nil
-}
 
 func IsCancel(err error) bool {
 	const interroptErr = "interrupt signal received"

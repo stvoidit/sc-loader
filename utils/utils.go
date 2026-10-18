@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"math/rand/v2"
 	"os"
 	"slices"
 	"sync"
@@ -29,14 +28,14 @@ func SaveFile(filename string, rc io.ReadCloser) io.ReadCloser {
 	return io.NopCloser(bytes.NewReader(b))
 }
 
-func MakeUniq() string {
-	var pack = []rune("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
-	var buf = make([]rune, 16)
-	for i := range buf {
-		buf[i] = pack[rand.IntN(len(pack))]
-	}
-	return string(buf)
-}
+// func MakeUniq() string {
+// 	var pack = []rune("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+// 	var buf = make([]rune, 16)
+// 	for i := range buf {
+// 		buf[i] = pack[rand.IntN(len(pack))]
+// 	}
+// 	return string(buf)
+// }
 
 const (
 	B  = 1

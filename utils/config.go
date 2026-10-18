@@ -5,7 +5,6 @@ import (
 	"encoding/json/v2"
 	"errors"
 	"log/slog"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -133,18 +132,4 @@ func (cnf Config) String() string {
 
 func (cnf Config) MakeFilePath(filename string) (fullPath string) {
 	return filepath.Join(cnf.Folder, filename)
-}
-
-func (cnf Config) CreateVideoFile(filename string) (file *os.File, err error) {
-	fullPath := cnf.MakeFilePath(filename)
-	return os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0644)
-}
-
-func (cnf Config) GetUserURL(username string) string {
-	link := url.URL{
-		Scheme: "https",
-		Host:   cnf.Host,
-		Path:   username,
-	}
-	return link.String()
 }

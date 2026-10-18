@@ -6,37 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
-
-func TestFileStat(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "file.bin")
-	if err := os.WriteFile(path, bytes.Repeat([]byte{1}, 2048), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	size, err := FileStat(f)
-	if err != nil {
-		t.Fatalf("FileStat() error = %v", err)
-	}
-	if size != "2.0 KB" {
-		t.Errorf("FileStat() = %q, want %q", size, "2.0 KB")
-	}
-
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := FileStat(f); err == nil {
-		t.Error("FileStat() для закрытого файла error = nil, want error")
-	}
-}
 
 func TestIsCancel(t *testing.T) {
 	tests := []struct {

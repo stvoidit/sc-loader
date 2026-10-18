@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"os"
 	"regexp"
 	"sc-loader/models"
 	"sc-loader/utils"
@@ -20,8 +19,6 @@ import (
 )
 
 const ua = `Mozilla/5.0 (X11; Linux x86_64; rv:157.0) Gecko/20100101 Firefox/157.0`
-
-type Probe struct{}
 
 type ClientAPI struct {
 	_c             *http.Client
@@ -102,14 +99,6 @@ func (c *ClientAPI) doGetRequest(req *http.Request) (res *http.Response, err err
 	)
 	err = unzipResponse(res)
 	return
-}
-
-func (c *ClientAPI) Init(ctx context.Context) (cdnDomain string, err error) {
-	id, err := c.InitClientConfig(ctx)
-	if err != nil {
-		return "", err
-	}
-	return id.GetDomainCDN()
 }
 
 func (c *ClientAPI) getFrontendVersion(ctx context.Context) error {
@@ -289,27 +278,8 @@ func (c *ClientAPI) GetPlaylistVideo(
 	return c.filterParts(links), hlsQuery, nil
 }
 
-func (c *ClientAPI) IsNewURL(link string) bool {
-	return !c.writedParts.Has(link)
-}
 func (c *ClientAPI) SetCheckURL(link string) {
 	c.writedParts.Set(link)
-}
-
-func (c *ClientAPI) DownloadWrite(ctx context.Context, f *os.File, link string) (n int, err error) {
-	if !c.IsNewURL(link) {
-		return 0, nil
-	}
-	buf, err := c.DownloadBuf(ctx, link)
-	if err != nil {
-		return 0, err
-	}
-	n, err = f.Write(buf)
-	if err != nil {
-		return 0, err
-	}
-	c.SetCheckURL(link)
-	return n, err
 }
 
 func (c *ClientAPI) DownloadBuf(ctx context.Context, link string) ([]byte, error) {

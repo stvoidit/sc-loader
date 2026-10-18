@@ -40,26 +40,6 @@ func TestFormatFileSize(t *testing.T) {
 	}
 }
 
-func TestMakeUniq(t *testing.T) {
-	const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	seen := make(map[string]struct{}, 100)
-	for range 100 {
-		got := MakeUniq()
-		if len(got) != 16 {
-			t.Fatalf("MakeUniq() len = %d, want 16 (%q)", len(got), got)
-		}
-		for _, r := range got {
-			if !strings.ContainsRune(alphabet, r) {
-				t.Fatalf("MakeUniq() = %q, содержит символ %q вне алфавита", got, r)
-			}
-		}
-		if _, ok := seen[got]; ok {
-			t.Fatalf("MakeUniq() повтор значения %q", got)
-		}
-		seen[got] = struct{}{}
-	}
-}
-
 func TestSaveFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "dump.json")
 	const content = `{"id":1}`

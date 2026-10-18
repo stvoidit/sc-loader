@@ -40,79 +40,21 @@ func TestGetDomainsCDN(t *testing.T) {
 	}
 }
 
-func TestGetDomainCDN(t *testing.T) {
-	t.Run("no domains", func(t *testing.T) {
-		var id InitialDynamic
-		got, err := id.GetDomainCDN()
-		if err == nil {
-			t.Fatalf("GetDomainCDN() error = nil, want error")
-		}
-		if got != "" {
-			t.Errorf("GetDomainCDN() = %q, want empty", got)
-		}
-	})
-
-	t.Run("single domain", func(t *testing.T) {
-		var id InitialDynamic
-		id.Players.CDNConfig = []CDNConfig{cdn("doppiocdn.com")}
-		got, err := id.GetDomainCDN()
-		if err != nil {
-			t.Fatalf("GetDomainCDN() error = %v", err)
-		}
-		if got != "doppiocdn.com" {
-			t.Errorf("GetDomainCDN() = %q, want %q", got, "doppiocdn.com")
-		}
-	})
-
-	t.Run("random from list", func(t *testing.T) {
-		var id InitialDynamic
-		want := []string{"one.com", "two.com", "three.com"}
-		for _, d := range want {
-			id.Players.CDNConfig = append(id.Players.CDNConfig, cdn(d))
-		}
-		for range 50 {
-			got, err := id.GetDomainCDN()
-			if err != nil {
-				t.Fatalf("GetDomainCDN() error = %v", err)
-			}
-			if !slices.Contains(want, got) {
-				t.Fatalf("GetDomainCDN() = %q, want one of %v", got, want)
-			}
-		}
-	})
-}
-
-func TestPlayersGetCDNConfigs(t *testing.T) {
-	p := Players{CDNConfig: []CDNConfig{cdn("a.com"), cdn("b.com")}}
-	if got := p.GetCDNConfigs(); len(got) != 2 || got[0].Domain != "a.com" {
-		t.Errorf("GetCDNConfigs() = %v, want [a.com b.com]", got)
-	}
-}
-
-// TestInitialDynamicResponseJSON проверяет разбор реального ответа
-// /api/front/v3/config/initial-dynamic (только используемые поля).
+// TestInitialDynamicResponseJSON проверяет разбор ответа
+// /api/front/v3/config/initial-dynamic: неизвестные поля игнорируются.
 func TestInitialDynamicResponseJSON(t *testing.T) {
 	const body = `{
 		"initialDynamic": {
 			"csrfToken": "csrf-token",
-			"csrfTimestamp": "2026-03-13T10:26:31.846Z",
 			"guestId": 4242,
-			"sessionHash": "hash",
-			"tabId": "tab",
-			"websocketUrl": "wss://example.com/ws",
-			"websocket": {"url": "wss://example.com/ws", "token": "tok"},
 			"players": {
 				"playoutDelayHint": 0.5,
 				"isHLSLLEnabled": true,
-				"llCountriesBlacklist": ["RU"],
 				"cdnConfig": [
 					{"domain": "doppiocdn.com", "features": {"ll": true}},
 					{"domain": "edge-hls.doppiocdn.com", "features": {"ll": true}},
 					{"domain": "doppiocdn2.com", "features": {"ll": false}}
-				],
-				"broadcastResolutionList": {
-					"720p": {"bitrate": 2500, "width": 1280, "height": 720, "isEnabled": true}
-				}
+				]
 			},
 			"unknownField": "ignored"
 		}
@@ -123,22 +65,13 @@ func TestInitialDynamicResponseJSON(t *testing.T) {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
 	id := resp.InitialDynamic
-	if id.CSRFToken != "csrf-token" || id.GuestID != 4242 {
-		t.Errorf("InitialDynamic = %+v, want csrfToken/guestId", id)
-	}
-	if id.Websocket.Token != "tok" {
-		t.Errorf("Websocket = %+v, want token=tok", id.Websocket)
-	}
-	if !id.Players.IsHLSLLEnabled || id.Players.PlayoutDelayHint != 0.5 {
-		t.Errorf("Players = %+v, want isHLSLLEnabled/playoutDelayHint", id.Players)
+	if len(id.Players.CDNConfig) != 3 {
+		t.Fatalf("CDNConfig = %+v, want 3 элемента", id.Players.CDNConfig)
 	}
 	if got := id.GetDomainsCDN(); !slices.Equal(
 		got,
 		[]string{"doppiocdn.com", "edge-hls.doppiocdn.com"},
 	) {
 		t.Errorf("GetDomainsCDN() = %v, want [doppiocdn.com edge-hls.doppiocdn.com]", got)
-	}
-	if res := id.Players.BroadcastResolutionList["720p"]; res.Width != 1280 || !res.IsEnabled {
-		t.Errorf("BroadcastResolutionList = %+v, want width=1280", res)
 	}
 }

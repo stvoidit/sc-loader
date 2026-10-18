@@ -145,49 +145,6 @@ func TestConfigMakeFilePath(t *testing.T) {
 	}
 }
 
-func TestConfigGetUserURL(t *testing.T) {
-	cnf := Config{Host: "example.com"}
-	if got := cnf.GetUserURL("alex"); got != "https://example.com/alex" {
-		t.Errorf("GetUserURL() = %q, want %q", got, "https://example.com/alex")
-	}
-}
-
-func TestConfigCreateVideoFile(t *testing.T) {
-	cnf := Config{Folder: t.TempDir()}
-
-	f, err := cnf.CreateVideoFile("stream_tmp.mp4")
-	if err != nil {
-		t.Fatalf("CreateVideoFile() error = %v", err)
-	}
-	if _, err := f.WriteString("abc"); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	// повторный вызов открывает тот же файл в режиме append
-	f2, err := cnf.CreateVideoFile("stream_tmp.mp4")
-	if err != nil {
-		t.Fatalf("CreateVideoFile() error = %v", err)
-	}
-	defer DeferCloseReader(f2)
-	if _, err := f2.WriteString("def"); err != nil {
-		t.Fatal(err)
-	}
-	if err := f2.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := os.ReadFile(cnf.MakeFilePath("stream_tmp.mp4"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != "abcdef" {
-		t.Errorf("файл = %q, want %q", got, "abcdef")
-	}
-}
-
 func TestConfigString(t *testing.T) {
 	cnf := Config{
 		Debug:  true,
